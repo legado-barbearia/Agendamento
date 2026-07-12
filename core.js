@@ -302,6 +302,7 @@
       phoneDigits,
       photo: String(client?.photo || client?.profilePhoto || ""),
       notes: String(client?.notes || ""),
+      existingCustomer: client?.existingCustomer === true || client?.existingCustomer === "yes" || client?.isExistingCustomer === true || client?.is_existing_customer === true,
       firstSeenAt: client?.firstSeenAt || client?.createdAt || new Date().toISOString(),
       lastSeenAt: client?.lastSeenAt || client?.updatedAt || client?.createdAt || new Date().toISOString(),
       createdAt: client?.createdAt || client?.firstSeenAt || new Date().toISOString(),
@@ -321,6 +322,9 @@
   }
 
   function upsertClient(client) {
+    const hasExistingCustomerAnswer = Object.prototype.hasOwnProperty.call(client || {}, "existingCustomer")
+      || Object.prototype.hasOwnProperty.call(client || {}, "isExistingCustomer")
+      || Object.prototype.hasOwnProperty.call(client || {}, "is_existing_customer");
     const normalized = normalizeClient(client);
     if (!normalized.phoneDigits) return normalized;
     const clients = getStoredClients();
@@ -331,6 +335,7 @@
         ...clients[index],
         ...normalized,
         photo: normalized.photo || clients[index].photo,
+        existingCustomer: hasExistingCustomerAnswer ? normalized.existingCustomer : clients[index].existingCustomer,
         firstSeenAt: clients[index].firstSeenAt,
         lastSeenAt: now,
         updatedAt: now

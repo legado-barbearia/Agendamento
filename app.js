@@ -104,6 +104,19 @@
     });
   }
 
+  function renderWelcomeExperience() {
+    const client = L.getClients().find(item => item.phoneDigits && item.name && item.name !== "Cliente Legado");
+    const title = $("#heroTitle");
+    const text = $("#heroText");
+    const cta = $("#heroPrimaryCta");
+    if (!title || !text || !cta || !client) return;
+    const firstName = client.name.split(/\s+/).filter(Boolean)[0] || client.name;
+    title.textContent = `Bem-vindo de volta, ${firstName}. Pronto para renovar seu visual?`;
+    text.textContent = "Seu perfil ja esta salvo. Escolha sua experiencia e reserve o melhor horario para voltar a cadeira da Legado.";
+    cta.textContent = "Agendar novamente";
+    cta.setAttribute("href", "#agendar");
+  }
+
   function closePortfolioLightbox() {
     const modal = $("#portfolioLightbox");
     modal.classList.remove("open");
@@ -646,6 +659,7 @@
       if ($("#profileName")) $("#profileName").value = client.name || "";
       if ($("#profilePhone")) $("#profilePhone").value = client.phone || "";
       if ($("#profilePhotoData")) $("#profilePhotoData").value = client.photo || "";
+      if ($("#profileExistingCustomer")) $("#profileExistingCustomer").value = client.existingCustomer ? "yes" : "no";
       if ($("#profileNotes")) $("#profileNotes").value = client.notes || "";
       renderProfileAvatar(client);
     }
@@ -791,10 +805,10 @@
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      showToast("Preparando foto do perfil...");
+      showToast("Preparando foto do seu perfil...");
       $("#profilePhotoData").value = await optimizeImage(file, 720, .78);
       renderProfileAvatar({ name: $("#profileName").value, photo: $("#profilePhotoData").value });
-      showToast("Foto adicionada ao cadastro.");
+      showToast("Foto adicionada ao seu perfil.");
     } catch (error) {
       $("#profilePhotoData").value = "";
       event.target.value = "";
@@ -806,11 +820,13 @@
     const name = $("#profileName").value.trim();
     const phone = L.formatPhone($("#profilePhone").value);
     const phoneDigits = L.normalizePhone(phone);
-    if (name.length < 2) return showToast("Informe seu nome para salvar o cadastro.", true);
+    const existingCustomer = $("#profileExistingCustomer").value;
+    if (name.length < 2) return showToast("Informe seu nome para criar seu perfil.", true);
     if (phoneDigits.length < 10) return showToast("Informe um WhatsApp válido.", true);
-    const client = L.upsertClient({ name, phone, phoneDigits, photo: $("#profilePhotoData").value || "", notes: $("#profileNotes").value.trim() });
+    if (!existingCustomer) return showToast("Informe se você já é cliente da Legado.", true);
+    const client = L.upsertClient({ name, phone, phoneDigits, photo: $("#profilePhotoData").value || "", existingCustomer: existingCustomer === "yes", notes: $("#profileNotes").value.trim() });
     applyClientProfile(client, "all");
-    showToast("Cadastro salvo. Seus próximos agendamentos ficam mais rápidos.");
+    showToast("Perfil criado. Agora você faz parte da experiência Legado.");
   });
   $("#reviewForm")?.addEventListener("submit", event => {
     event.preventDefault();
@@ -842,7 +858,7 @@
       updatedAt: new Date().toISOString()
     }));
     L.setTestimonials(items);
-    L.upsertClient({ name, phone, phoneDigits, photo, notes: existingClient?.notes || "" });
+    L.upsertClient({ name, phone, phoneDigits, photo, existingCustomer: existingClient?.existingCustomer || false, notes: existingClient?.notes || "" });
     $("#reviewForm").reset();
     showToast("Avaliação enviada. Ela aparecerá no site depois da aprovação.");
   });
@@ -982,7 +998,7 @@
   function refreshData() {
     settings = L.getSettings(); services = L.getServices(); availability = L.getAvailability();
     if (state.serviceId) state.service = services.find(item => item.id === state.serviceId) || null;
-    applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); updateSummary(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderBusinessStatus();
+    applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); updateSummary(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderBusinessStatus(); renderWelcomeExperience();
   }
 
   window.addEventListener("storage", refreshData);
@@ -995,7 +1011,7 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 
-  applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); renderBarbers(); renderPortfolio(); renderTestimonials(); goToStep(1); observeReveals();
+  applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderWelcomeExperience(); goToStep(1); observeReveals();
 
   const query = new URLSearchParams(location.search);
   if (query.get("telefone") && query.get("codigo")) {

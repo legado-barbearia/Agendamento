@@ -47,7 +47,7 @@
       <a href="#portfolio">Portfólio</a>
       <a href="#barbeiros">Barbeiros</a>
       <a href="#agendar">Agendar</a>
-      <a href="#meus-horarios">Meus horários</a>
+      <a href="#meus-horarios">Área exclusiva</a>
       <a href="#avaliacoes">Avaliações</a>
       <a href="#visite">Contato</a>
       <a href="admin.html">Administrador</a>
@@ -59,18 +59,19 @@
   <main id="conteudo">
     <section class="hero" id="inicio">
       <div class="hero-copy reveal">
-        <span class="eyebrow">TRADIÇÃO · ESTILO · EXCELÊNCIA</span>
-        <h1>Seu estilo também deixa um <em>legado.</em></h1>
-        <p>Escolha o serviço, encontre um horário realmente disponível e confirme em poucos passos.</p>
+        <span class="eyebrow" id="heroEyebrow">EXPERIÊNCIA LEGADO</span>
+        <h1 id="heroTitle">Seu próximo corte começa antes mesmo de você sentar na cadeira.</h1>
+        <p id="heroText">Permita que a Legado conheça você, apresente sua história e conduza sua jornada até o horário ideal.</p>
         <div class="hero-actions">
-          <a class="button" href="#agendar">Agendar agora</a>
-          <a class="text-link" href="#portfolio">Ver portfólio <span>↓</span></a>
+          <a class="button" id="heroPrimaryCta" href="#meus-horarios">Começar minha experiência</a>
+          <a class="text-link" href="#sobre">Conhecer nossa história <span>↓</span></a>
+          <a class="text-link" href="#portfolio">Ver resultados <span>↓</span></a>
           <a class="text-link" id="heroInstagram" href="#" target="_blank" rel="noopener">Ver Instagram <span>↗</span></a>
         </div>
         <div class="trust-row">
-          <div><strong>Agenda inteligente</strong><span>sem choque de horários</span></div>
-          <div><strong>Atendimento</strong><span>com Gilliel Glaydson</span></div>
-          <div><strong>Confirmação</strong><span>direta pelo WhatsApp</span></div>
+          <div><strong>Acolhimento</strong><span>perfil salvo para próximas visitas</span></div>
+          <div><strong>Cuidado</strong><span>atenção aos detalhes</span></div>
+          <div><strong>Agenda</strong><span>horários sem conflito</span></div>
         </div>
       </div>
       <div class="hero-mark reveal">
@@ -82,9 +83,9 @@
 
     <section class="section" id="servicos">
       <div class="section-heading reveal">
-        <span class="eyebrow">NOSSOS SERVIÇOS</span>
-        <h2>Escolha como quer renovar seu visual</h2>
-        <p>Os horários são calculados conforme a duração de cada serviço e o intervalo entre clientes.</p>
+        <span class="eyebrow">ESCOLHA SUA EXPERIÊNCIA</span>
+        <h2>Agora escolha como quer renovar seu visual</h2>
+        <p>Cada serviço reserva o tempo necessário para entregar cuidado, acabamento e pontualidade.</p>
       </div>
       <div class="services-grid" id="publicServicesGrid"></div>
     </section>
@@ -99,13 +100,13 @@
         <article class="tutorial-step reveal"><span class="tutorial-number">01</span><div><small>ESCOLHA</small><h3>Selecione o serviço</h3><p>Veja as opções disponíveis, o tempo estimado e o valor, quando estiver cadastrado.</p></div></article>
         <article class="tutorial-step reveal"><span class="tutorial-number">02</span><div><small>DATA</small><h3>Escolha o melhor dia</h3><p>O sistema mostra somente os dias configurados para atendimento na barbearia.</p></div></article>
         <article class="tutorial-step reveal"><span class="tutorial-number">03</span><div><small>HORÁRIO</small><h3>Selecione um horário livre</h3><p>Os horários ocupados, pausas e bloqueios são retirados automaticamente da lista.</p></div></article>
-        <article class="tutorial-step reveal"><span class="tutorial-number">04</span><div><small>DADOS</small><h3>Informe nome e WhatsApp</h3><p>Preencha seus dados e, se desejar, escreva uma observação sobre o estilo do corte.</p></div></article>
+        <article class="tutorial-step reveal"><span class="tutorial-number">04</span><div><small>PERFIL</small><h3>Permita-nos conhecer você</h3><p>Informe nome, WhatsApp e preferências para a Legado preparar um atendimento mais pessoal.</p></div></article>
         <article class="tutorial-step reveal"><span class="tutorial-number">05</span><div><small>CONFIRMAÇÃO</small><h3>Envie pelo WhatsApp</h3><p>Ao finalizar, o horário fica pré-reservado e não aparece para outra pessoa neste sistema. A confirmação definitiva é feita pela barbearia.</p></div></article>
-        <article class="tutorial-step reveal"><span class="tutorial-number">06</span><div><small>DEPOIS</small><h3>Consulte ou reagende</h3><p>Use seu WhatsApp e o código do agendamento na área “Meus horários”.</p></div></article>
+        <article class="tutorial-step reveal"><span class="tutorial-number">06</span><div><small>DEPOIS</small><h3>Consulte ou reagende</h3><p>Use seu WhatsApp e o código do agendamento na sua área exclusiva.</p></div></article>
       </div>
       <div class="tutorial-callout reveal">
         <div><span class="eyebrow">DICA IMPORTANTE</span><h3>Guarde o código do seu agendamento</h3><p>Ele permite consultar os detalhes, cancelar ou reagendar no mesmo aparelho enquanto o sistema ainda não estiver conectado ao Supabase.</p></div>
-        <div class="tutorial-actions"><a class="button" href="#agendar">Começar agendamento</a><a class="button button-secondary" href="#meus-horarios">Consultar horário</a></div>
+        <div class="tutorial-actions"><a class="button" href="#meus-horarios">Criar meu perfil</a><a class="button button-secondary" href="#agendar">Ir para agenda</a></div>
       </div>
     </section>
 
@@ -156,7 +157,7 @@
 
     <section class="booking-section" id="agendar">
       <div class="booking-intro reveal">
-        <span class="eyebrow">AGENDAMENTO ONLINE</span>
+        <span class="eyebrow">SUA JORNADA</span>
         <h2>Reserve seu horário</h2>
         <p>O sistema considera a duração do serviço, pausas, bloqueios e horários já ocupados.</p>
         <div class="booking-perks">
@@ -199,7 +200,7 @@
           </section>
 
           <section class="form-step" data-step="4">
-            <div class="form-title"><span>04</span><div><h3>Seus dados</h3><p>Preencha para receber os detalhes do atendimento.</p></div></div>
+            <div class="form-title"><span>04</span><div><h3>Seu perfil</h3><p>Preencha para receber os detalhes do atendimento.</p></div></div>
             <div class="booking-review" id="bookingReview" aria-live="polite"></div>
             <div class="field-grid">
               <label><span>Nome completo</span><input id="clientName" name="clientName" type="text" autocomplete="name" placeholder="Digite seu nome" required /></label>
@@ -222,28 +223,29 @@
 
     <section class="section manage-section" id="meus-horarios">
       <div class="section-heading reveal">
-        <span class="eyebrow">ÁREA DO CLIENTE</span>
-        <h2>Consulte seus horários</h2>
-        <p>Use o WhatsApp informado e o código recebido ao finalizar o agendamento.</p>
+        <span class="eyebrow">ÁREA EXCLUSIVA</span>
+        <h2>Permita-nos conhecer você</h2>
+        <p>Crie seu perfil uma vez para a Legado receber você com mais cuidado nas próximas visitas.</p>
       </div>
       <div class="manage-grid reveal">
         <form class="lookup-card profile-card" id="profileForm">
           <div class="profile-card-head">
             <div class="profile-avatar-preview" id="profileAvatarPreview">CL</div>
-            <div><span class="eyebrow">PRIMEIRO ACESSO</span><h3>Meu cadastro</h3><p>Salve seus dados uma vez para agendar e avaliar mais rápido.</p></div>
+            <div><span class="eyebrow">BEM-VINDO À LEGADO</span><h3>Seu perfil</h3><p>Agora você faz parte da experiência Legado. Conte o básico para prepararmos sua jornada.</p></div>
           </div>
           <input id="profilePhotoData" type="hidden" />
           <label><span>Nome completo</span><input id="profileName" type="text" autocomplete="name" placeholder="Seu nome" required /></label>
           <label><span>WhatsApp</span><input id="profilePhone" type="tel" autocomplete="tel" placeholder="(64) 99999-9999" required /></label>
+          <label><span>Você já é cliente da Legado?</span><select id="profileExistingCustomer"><option value="">Selecione</option><option value="yes">Sim, já sou cliente</option><option value="no">Ainda não, será minha primeira vez</option></select></label>
           <label class="client-photo-field"><span>Foto de perfil <small>(opcional)</small></span><input id="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" /></label>
           <label><span>Preferências <small>(opcional)</small></span><textarea id="profileNotes" rows="3" placeholder="Ex.: degradê baixo, barba mais alinhada..."></textarea></label>
-          <button class="button" type="submit">Salvar meu cadastro</button>
-          <small>Na próxima vez, digite seu WhatsApp e o site preenche seus dados automaticamente.</small>
+          <button class="button" type="submit">Criar meu perfil</button>
+          <small>Na próxima vez, digite seu WhatsApp e a Legado reconhece você automaticamente.</small>
         </form>
         <form class="lookup-card" id="lookupForm">
           <label><span>Seu WhatsApp</span><input id="lookupPhone" type="tel" placeholder="(64) 99999-9999" required /></label>
           <label><span>Código do agendamento</span><input id="lookupCode" type="text" placeholder="Ex.: ABC-1234" required /></label>
-          <button class="button" type="submit">Consultar agendamento</button>
+          <button class="button" type="submit">Entrar na minha área</button>
           <small>Os dados são encontrados somente no aparelho em que o agendamento foi realizado nesta versão.</small>
         </form>
         <div class="lookup-result" id="lookupResult">
@@ -268,7 +270,7 @@
             <label><span>Serviço</span><input id="reviewService" type="text" placeholder="Ex.: Corte + Barba" /></label>
             <label><span>Estrelas</span><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select></label>
             <label class="full"><span>Comentário</span><textarea id="reviewText" rows="3" maxlength="420" placeholder="Como foi sua experiência?" required></textarea></label>
-            <label class="consent full"><input id="reviewConsent" type="checkbox" required /><span>Autorizo a Legado a analisar e, se aprovado, publicar meu nome, avaliação e foto do meu cadastro no site.</span></label>
+            <label class="consent full"><input id="reviewConsent" type="checkbox" required /><span>Autorizo a Legado a analisar e, se aprovado, publicar meu nome, avaliação e foto do meu perfil no site.</span></label>
           </div>
           <button class="button button-secondary" type="submit">Enviar avaliação para aprovação</button>
         </form>

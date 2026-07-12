@@ -78,6 +78,7 @@ create table if not exists public.clients (
   client_phone text not null,
   phone_digits text not null unique,
   profile_photo text not null default '',
+  is_existing_customer boolean not null default false,
   notes text not null default '',
   first_seen_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
@@ -134,6 +135,7 @@ create table if not exists public.testimonials (
 );
 
 alter table public.bookings add column if not exists client_photo text not null default '';
+alter table public.clients add column if not exists is_existing_customer boolean not null default false;
 alter table public.testimonials add column if not exists client_phone text not null default '';
 alter table public.testimonials add column if not exists phone_digits text not null default '';
 alter table public.testimonials add column if not exists profile_photo text not null default '';
@@ -176,6 +178,11 @@ with check (status = 'pending' and char_length(phone_digits) between 10 and 13);
 
 create policy "public create client profile" on public.clients
 for insert to anon
+with check (char_length(phone_digits) between 10 and 13);
+
+create policy "public update client profile" on public.clients
+for update to anon
+using (char_length(phone_digits) between 10 and 13)
 with check (char_length(phone_digits) between 10 and 13);
 
 create policy "public create pending testimonial" on public.testimonials

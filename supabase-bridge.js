@@ -148,6 +148,7 @@
       phone_digits: item.phoneDigits,
       profile_photo: item.photo || "",
       notes: item.notes || "",
+      is_existing_customer: Boolean(item.existingCustomer),
       first_seen_at: item.firstSeenAt || new Date().toISOString(),
       last_seen_at: item.lastSeenAt || new Date().toISOString(),
       created_at: item.createdAt || new Date().toISOString(),
@@ -178,7 +179,7 @@
   }
 
   function mapClient(row, index) {
-    return L.normalizeClient({ id: row.id || row.phone_digits || `client-${index}`, name: row.client_name, phone: row.client_phone, phoneDigits: row.phone_digits, photo: row.profile_photo, notes: row.notes, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at, createdAt: row.created_at, updatedAt: row.updated_at }, index);
+    return L.normalizeClient({ id: row.id || row.phone_digits || `client-${index}`, name: row.client_name, phone: row.client_phone, phoneDigits: row.phone_digits, photo: row.profile_photo, notes: row.notes, existingCustomer: row.is_existing_customer, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at, createdAt: row.created_at, updatedAt: row.updated_at }, index);
   }
 
   function mapPortfolio(row, index) {
