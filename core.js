@@ -33,7 +33,7 @@
     aboutTitle: "Uma barbearia criada para deixar legado.",
     aboutText: "A Legado nasceu em Mineiros com uma ideia simples: transformar o cuidado masculino em um momento de respeito, presença e identidade. Cada corte, barba e acabamento carrega atenção aos detalhes, conversa boa e o compromisso de fazer o cliente sair se reconhecendo melhor no espelho.",
     professionalBio: "Gilliel Glaydson une precisão, atenção aos detalhes e atendimento personalizado para entregar cortes e barbas alinhados ao perfil de cada cliente.",
-    professionalPhoto: "assets/gilliel-apresentacao.webp",
+    professionalPhoto: "assets/legado-gilliel-fundador.jpg",
     portfolioEyebrow: "PORTFÓLIO",
     portfolioTitle: "Resultados reais, feitos na Legado.",
     portfolioText: "Fotos reais de cortes, barbas, acabamentos e transformações realizadas na barbearia.",
@@ -82,7 +82,82 @@
 
   // O portfólio começa vazio para não repetir os mesmos ícones usados na seção de serviços.
   // As fotos reais dos trabalhos são adicionadas pelo painel administrativo.
-  const DEFAULT_PORTFOLIO = [];
+  const DEFAULT_PORTFOLIO = [
+    {
+      id: "resultado-barba-degrade",
+      title: "Barba marcada e degradê limpo",
+      category: "Barba",
+      summary: "Alinhamento de barba com acabamento preciso e transição natural.",
+      description: "Um resultado forte para quem busca presença, simetria e acabamento de alto padrão.",
+      image: "assets/legado-barba-degrade.jpg",
+      images: ["assets/legado-barba-degrade.jpg"],
+      alt: "Cliente com barba alinhada e degradê feito na Legado Barbearia",
+      featured: true,
+      active: true,
+      order: 1
+    },
+    {
+      id: "resultado-atendimento-classico",
+      title: "Atendimento clássico",
+      category: "Experiência",
+      summary: "Cuidado no pente, na tesoura e na leitura do estilo de cada cliente.",
+      description: "A experiência Legado começa antes do resultado final: atenção, conversa e técnica em cada etapa.",
+      image: "assets/legado-atendimento-classico.jpg",
+      images: ["assets/legado-atendimento-classico.jpg", "assets/legado-tesoura-detalhe.jpg"],
+      alt: "Gilliel atendendo cliente na Legado Barbearia",
+      featured: true,
+      active: true,
+      order: 2
+    },
+    {
+      id: "resultado-social-barba",
+      title: "Social com barba",
+      category: "Corte + Barba",
+      summary: "Visual alinhado para quem valoriza presença e acabamento.",
+      description: "Corte social com barba desenhada, pensado para destacar o rosto e manter elegância no dia a dia.",
+      image: "assets/legado-barba-social.jpg",
+      images: ["assets/legado-barba-social.jpg"],
+      alt: "Cliente com corte social e barba feita na Legado Barbearia",
+      active: true,
+      order: 3
+    },
+    {
+      id: "resultado-degrade-costas",
+      title: "Degradê natural",
+      category: "Cortes",
+      summary: "Transição limpa e acabamento discreto na nuca.",
+      description: "Um corte com leitura mais natural, mantendo estrutura e leveza no visual.",
+      image: "assets/legado-degrade-costas.jpg",
+      images: ["assets/legado-degrade-costas.jpg", "assets/legado-degrade-duplo.jpg"],
+      alt: "Acabamento de degradê na nuca realizado na Legado Barbearia",
+      active: true,
+      order: 4
+    },
+    {
+      id: "resultado-infantil-premium",
+      title: "Infantil com cuidado",
+      category: "Infantil",
+      summary: "Atendimento paciente, técnico e confortável para crianças.",
+      description: "A Legado também cuida dos pequenos com calma, atenção e acabamento bonito.",
+      image: "assets/legado-gilliel-atendimento-infantil.jpg",
+      images: ["assets/legado-gilliel-atendimento-infantil.jpg", "assets/legado-infantil-degrade-processo.jpg", "assets/legado-infantil-social.jpg"],
+      alt: "Atendimento infantil na Legado Barbearia",
+      active: true,
+      order: 5
+    },
+    {
+      id: "resultado-infantil-desenho",
+      title: "Infantil com desenho",
+      category: "Infantil",
+      summary: "Degradê com desenho personalizado para um visual cheio de atitude.",
+      description: "Resultado infantil com desenho na lateral e acabamento moderno.",
+      image: "assets/legado-infantil-desenho.jpg",
+      images: ["assets/legado-infantil-desenho.jpg"],
+      alt: "Corte infantil com desenho feito na Legado Barbearia",
+      active: true,
+      order: 6
+    }
+  ];
   const LEGACY_PORTFOLIO_IDS = new Set(["portfolio-cortes", "portfolio-barbas", "portfolio-finalizacao", "portfolio-experiencia"]);
   const LEGACY_PORTFOLIO_IMAGES = new Set(["assets/corte.webp", "assets/barba.webp", "assets/produtos.webp", "assets/agendamento.webp"]);
 
@@ -202,8 +277,8 @@
   function getSettings() {
     const raw = loadRaw(KEYS.settings, DEFAULT_SETTINGS);
     const merged = { ...clone(DEFAULT_SETTINGS), ...(raw && typeof raw === "object" ? raw : {}) };
-    if (!raw?.professionalPhoto || raw.professionalPhoto === "assets/logo.webp" || raw.professionalPhoto === "assets/logo.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.png") {
-      merged.professionalPhoto = "assets/gilliel-apresentacao.webp";
+    if (!raw?.professionalPhoto || raw.professionalPhoto === "assets/logo.webp" || raw.professionalPhoto === "assets/logo.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.webp") {
+      merged.professionalPhoto = "assets/legado-gilliel-fundador.jpg";
     }
     if (!raw?.googleMapsUrl || raw.googleMapsUrl === "https://www.google.com/maps/search/?api=1&query=Av.%20Ant%C3%B4nio%20Carlos%20Paniago%2C%20Mineiros%20GO") {
       merged.googleMapsUrl = "https://maps.app.goo.gl/uMqV56GQe719X8EE7";
@@ -249,7 +324,8 @@
 
   function getPortfolio(includeInactive = false) {
     const raw = loadRaw(KEYS.portfolio, DEFAULT_PORTFOLIO);
-    const original = Array.isArray(raw) ? raw.map(normalizePortfolioItem) : clone(DEFAULT_PORTFOLIO);
+    const source = Array.isArray(raw) && raw.length ? raw : DEFAULT_PORTFOLIO;
+    const original = Array.isArray(source) ? source.map(normalizePortfolioItem) : clone(DEFAULT_PORTFOLIO);
     const items = original.filter(item => !isLegacyIconPortfolioItem(item));
     if (items.length !== original.length) {
       localStorage.setItem(KEYS.portfolio, JSON.stringify(items));

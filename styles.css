@@ -1093,6 +1093,52 @@ footer{
 .main-nav a[href="#meus-horarios"]{
   display:inline-flex!important;
 }
+
+/* V34 - Fotos reais da Legado na experiência pública */
+.hero-mark{
+  align-content:center;
+}
+.hero-mark .hero-experience-photo{
+  width:min(86%,520px)!important;
+  aspect-ratio:4/5;
+  object-fit:cover!important;
+  border-radius:28px;
+  border:1px solid rgba(239,215,126,.34);
+  box-shadow:0 28px 70px rgba(0,0,0,.46);
+}
+.hero-mark .hero-experience-photo:hover{
+  transform:translateY(-4px) scale(1.01);
+}
+.hero-mark .logo-halo{
+  width:min(88%,560px);
+  border-radius:34px;
+}
+.hero-mark .logo-halo:after,
+.hero-mark .logo-halo:before{
+  border-radius:30px;
+}
+.hero-mark .hero-stamp{
+  bottom:6%;
+  right:4%;
+  background:rgba(4,14,23,.78);
+  backdrop-filter:blur(10px);
+}
+.portfolio-card img{
+  object-position:center;
+}
+.portfolio-card[data-portfolio-id="resultado-atendimento-classico"] img,
+.portfolio-card[data-portfolio-id="resultado-infantil-premium"] img{
+  object-position:center 28%;
+}
+@media(max-width:700px){
+  .hero-mark .hero-experience-photo{
+    width:100%!important;
+    max-height:420px;
+  }
+  .hero-mark .logo-halo{
+    width:100%;
+  }
+}
 @media(max-width:1120px){
   .manage-grid{
     grid-template-columns:1fr 1fr!important;
