@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="assets/app-icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script type="application/ld+json">
   {
@@ -125,6 +125,11 @@
           <div class="professional-monogram">GG</div>
           <div><strong id="professionalName">Gilliel Glaydson</strong><span>Barbeiro e responsável pela Legado</span><p id="professionalBio">Precisão, atenção aos detalhes e atendimento personalizado.</p></div>
         </div>
+        <div class="about-stats" aria-label="Números da Legado Barbearia">
+          <div><strong>+5</strong><span>anos de cuidado</span></div>
+          <div><strong>+2k</strong><span>atendimentos</span></div>
+          <div><strong>4.9</strong><span>experiência média</span></div>
+        </div>
         <div class="about-actions">
           <a class="button" href="#agendar">Agendar com Gilliel</a>
           <a class="button button-secondary" id="mapButton" href="#" target="_blank" rel="noopener">Como chegar</a>
@@ -206,7 +211,8 @@
               <label><span>Nome completo</span><input id="clientName" name="clientName" type="text" autocomplete="name" placeholder="Digite seu nome" required /></label>
               <label><span>WhatsApp</span><input id="clientPhone" name="clientPhone" type="tel" autocomplete="tel" placeholder="(64) 99999-9999" required /></label>
               <input id="clientPhotoData" type="hidden" />
-              <label class="full"><span>Profissional</span><select id="professional" name="professional"></select></label>
+              <label class="full professional-select-label"><span>Profissional</span><select id="professional" name="professional"></select></label>
+              <div class="booking-barber-cards full" id="bookingBarberCards" aria-label="Selecionar barbeiro"></div>
               <label class="full"><span>Observação <small>(opcional)</small></span><textarea id="notes" name="notes" rows="3" placeholder="Alguma preferência ou observação?"></textarea></label>
               <label class="consent full"><input id="privacyConsent" type="checkbox" required /><span>Concordo que meus dados sejam usados apenas para organizar este agendamento.</span></label>
             </div>

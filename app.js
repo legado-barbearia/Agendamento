@@ -163,25 +163,57 @@
     const grid = $("#barbersGrid");
     if (!grid) return;
     const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
-    const primary = settings.professional || names[0] || "Barbeiro Legado";
     grid.innerHTML = names.map((name, index) => {
-      const isPrimary = String(name).trim().toLowerCase() === String(primary).trim().toLowerCase() || index === 0;
-      const photo = isPrimary ? (settings.professionalPhoto || "assets/gilliel-apresentacao.webp") : "assets/logo-192.png";
-      const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+      const profile = barberProfile(name, index);
       return `
         <article class="barber-card reveal">
           <div class="barber-photo">
-            <img src="${L.escapeHTML(photo)}" alt="${L.escapeHTML(name)}" loading="lazy" />
-            <span>${L.escapeHTML(initials || "LG")}</span>
+            <img src="${L.escapeHTML(profile.photo)}" alt="${L.escapeHTML(name)}" loading="lazy" />
+            <span>${L.escapeHTML(profile.initials)}</span>
           </div>
           <div>
-            <small>${isPrimary ? "RESPONSÁVEL PELA CASA" : "BARBEIRO LEGADO"}</small>
+            <small>${L.escapeHTML(profile.role)}</small>
             <h3>${L.escapeHTML(name)}</h3>
-            <p>${isPrimary ? L.escapeHTML(settings.professionalBio || "Atendimento cuidadoso, técnica e acabamento alinhado ao padrão Legado.") : "Atendimento com hora marcada, cuidado no acabamento e respeito ao estilo de cada cliente."}</p>
+            <p>${L.escapeHTML(profile.specialty)}. ${index === 0 ? L.escapeHTML(settings.professionalBio || "Atendimento cuidadoso, técnica e acabamento alinhado ao padrão Legado.") : "Atendimento com hora marcada e respeito ao estilo de cada cliente."}</p>
+            <div class="barber-card-meta"><span>★ ${profile.rating}</span><span>${profile.averageTime}</span></div>
           </div>
         </article>`;
     }).join("");
     observeReveals();
+  }
+
+  function barberProfile(name, index = 0) {
+    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const primary = settings.professional || names[0] || "Barbeiro Legado";
+    const isPrimary = String(name).trim().toLowerCase() === String(primary).trim().toLowerCase() || index === 0;
+    const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
+    return {
+      name,
+      initials,
+      photo: isPrimary ? (settings.professionalPhoto || "assets/gilliel-apresentacao.webp") : "assets/logo-192.png",
+      role: isPrimary ? "Fundador e barbeiro principal" : "Barbeiro Legado",
+      specialty: isPrimary ? "Cortes, barba e experiência completa" : "Cortes masculinos e acabamento",
+      rating: isPrimary ? "4.9" : "4.8",
+      averageTime: "30-60 min"
+    };
+  }
+
+  function renderBookingBarberCards() {
+    const box = $("#bookingBarberCards");
+    if (!box) return;
+    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const selected = elements.professional.value || settings.professional || names[0];
+    box.innerHTML = names.map((name, index) => {
+      const profile = barberProfile(name, index);
+      const active = String(name) === String(selected);
+      return `
+        <button class="booking-barber-card ${active ? "selected" : ""}" type="button" data-booking-barber="${L.escapeHTML(name)}" aria-pressed="${active}">
+          <span class="booking-barber-photo"><img src="${L.escapeHTML(profile.photo)}" alt="${L.escapeHTML(profile.name)}" loading="lazy" /><i>${L.escapeHTML(profile.initials)}</i></span>
+          <span class="booking-barber-copy"><small>${L.escapeHTML(profile.role)}</small><strong>${L.escapeHTML(profile.name)}</strong><em>${L.escapeHTML(profile.specialty)}</em></span>
+          <span class="booking-barber-meta"><b>★ ${profile.rating}</b><small>${profile.averageTime}</small></span>
+          <span class="booking-barber-select">${active ? "Selecionado" : "Selecionar"}</span>
+        </button>`;
+    }).join("");
   }
 
   function portfolioCategories(items) {
@@ -302,7 +334,8 @@
   function buildServiceChoices() {
     elements.serviceChoices.innerHTML = services.map(service => `
       <button type="button" class="choice ${state.serviceId === service.id ? "selected" : ""}" data-service="${L.escapeHTML(service.id)}">
-        <strong>${L.escapeHTML(service.name)}</strong><small>${L.escapeHTML(serviceMeta(service))}</small>
+        <img src="${L.escapeHTML(L.resolveMediaSource(service.icon))}" alt="" loading="lazy" />
+        <span><strong>${L.escapeHTML(service.name)}</strong><em>${L.escapeHTML(service.description)}</em><small>${L.escapeHTML(serviceMeta(service))}</small></span>
       </button>`).join("");
   }
 
@@ -600,6 +633,7 @@
     settings = L.getSettings();
     const selectedProfessional = elements.professional.value || settings.professional;
     elements.professional.innerHTML = settings.barbers.map(name => `<option value="${L.escapeHTML(name)}" ${name === selectedProfessional ? "selected" : ""}>${L.escapeHTML(name)}</option>`).join("");
+    renderBookingBarberCards();
     const whatsapp = $("#footerWhatsapp");
     whatsapp.href = `https://wa.me/${String(settings.whatsappNumber).replace(/\D/g, "")}`;
     whatsapp.textContent = `WhatsApp: ${settings.displayPhone}`;
@@ -811,7 +845,13 @@
     catch { showToast("Não foi possível copiar o link.", true); }
   });
 
-  elements.professional.addEventListener("change", () => { state.time = ""; buildTimes(); updateSummary(); });
+  elements.professional.addEventListener("change", () => { state.time = ""; renderBookingBarberCards(); buildTimes(); updateSummary(); });
+  $("#bookingBarberCards")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-booking-barber]");
+    if (!button) return;
+    elements.professional.value = button.dataset.bookingBarber;
+    elements.professional.dispatchEvent(new Event("change"));
+  });
   [$("#clientPhone"), $("#lookupPhone"), $("#reviewPhone"), $("#profilePhone")].filter(Boolean).forEach(input => input.addEventListener("input", () => {
     formatInputPhone(input);
     const client = findClientByPhone(input.value);
@@ -1008,6 +1048,9 @@
   const floatingWhatsapp = $("#floatingWhatsapp");
   const bookingSection = $("#agendar");
   const profileSection = $("#meus-horarios");
+  function updateHeaderState() {
+    document.body.classList.toggle("scrolled", window.scrollY > 18);
+  }
   function updateMobileCta() {
     if (!mobileBookingCta || !bookingSection) return;
     const box = bookingSection.getBoundingClientRect();
@@ -1020,8 +1063,10 @@
     mobileBookingCta.classList.toggle("is-hidden", hideFloatingActions);
     if (floatingWhatsapp) floatingWhatsapp.classList.toggle("is-hidden", hideFloatingActions);
   }
+  window.addEventListener("scroll", updateHeaderState, { passive: true });
   window.addEventListener("scroll", updateMobileCta, { passive: true });
   window.addEventListener("resize", updateMobileCta);
+  updateHeaderState();
   updateMobileCta();
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
