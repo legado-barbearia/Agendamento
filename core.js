@@ -34,6 +34,7 @@
     aboutText: "A Legado nasceu em Mineiros com uma ideia simples: transformar o cuidado masculino em um momento de respeito, presença e identidade. Cada corte, barba e acabamento carrega atenção aos detalhes, conversa boa e o compromisso de fazer o cliente sair se reconhecendo melhor no espelho.",
     professionalBio: "Gilliel Glaydson une precisão, atenção aos detalhes e atendimento personalizado para entregar cortes e barbas alinhados ao perfil de cada cliente.",
     professionalPhoto: "assets/legado-gilliel-fundador.jpg",
+    barberPhotos: {},
     portfolioEyebrow: "PORTFÓLIO",
     portfolioTitle: "Resultados reais, feitos na Legado.",
     portfolioText: "Fotos reais de cortes, barbas, acabamentos e transformações realizadas na barbearia.",
@@ -289,6 +290,7 @@
     merged.barbers = [...new Set([merged.professional, ...barbers].map(item => String(item || "").trim()).filter(Boolean))];
     if (!merged.barbers.length) merged.barbers = [merged.professional || DEFAULT_SETTINGS.professional];
     if (!merged.professional || !merged.barbers.includes(merged.professional)) merged.professional = merged.barbers[0];
+    merged.barberPhotos = merged.barberPhotos && typeof merged.barberPhotos === "object" && !Array.isArray(merged.barberPhotos) ? merged.barberPhotos : {};
     return merged;
   }
 
@@ -837,9 +839,9 @@
   function statusLabel(status) {
     return ({
       pending: "Pendente",
-      confirmed: "Confirmado",
+      confirmed: "Agendado",
       completed: "Concluído",
-      cancelled: "Cancelado",
+      cancelled: "Desmarcado",
       no_show: "Não compareceu"
     })[status] || status;
   }

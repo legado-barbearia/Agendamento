@@ -195,10 +195,11 @@
     const primary = settings.professional || names[0] || "Barbeiro Legado";
     const isPrimary = String(name).trim().toLowerCase() === String(primary).trim().toLowerCase() || index === 0;
     const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
+    const savedPhoto = settings.barberPhotos?.[name] || settings.barberPhotos?.[L.slugify(name)] || "";
     return {
       name,
       initials,
-      photo: isPrimary ? (settings.professionalPhoto || "assets/gilliel-apresentacao.webp") : "assets/logo-192.png",
+      photo: savedPhoto || "assets/logo-192.png",
       role: isPrimary ? "Fundador e barbeiro principal" : "Barbeiro Legado",
       specialty: isPrimary ? "Cortes, barba e experiência completa" : "Cortes masculinos e acabamento",
       rating: isPrimary ? "4.9" : "4.8",
@@ -495,7 +496,7 @@
     const review = $("#bookingReview");
     if (!review) return;
     if (!state.service || !state.date || !state.time) {
-      review.innerHTML = '<strong>Resumo do horário</strong><p>Escolha serviço, data e horário para revisar antes de confirmar.</p>';
+      review.innerHTML = '<strong>Resumo do horário</strong><p>Escolha serviço, data e horário para revisar antes de finalizar.</p>';
       return;
     }
     const professional = elements.professional.value || settings.professional;
@@ -827,7 +828,7 @@
     $("#privacyConsent").checked = true;
     buildDates(); buildTimes(); updateSummary(); goToStep(2);
     $("#agendar").scrollIntoView({ behavior: "smooth" });
-    showToast("Escolha a nova data e o novo horário. O anterior será cancelado após a confirmação.");
+    showToast("Escolha a nova data e o novo horário. O anterior será desmarcado ao finalizar.");
   }
 
   function cancelBooking(booking) {

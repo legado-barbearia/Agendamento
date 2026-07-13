@@ -212,7 +212,7 @@
     const [monthStart, monthEnd] = currentMonthRange();
     const todayList = bookings.filter(item => item.date === today && item.status !== "cancelled").sort((a, b) => a.startTime.localeCompare(b.startTime));
     const completedMonth = bookings.filter(item => item.status === "completed" && item.date >= monthStart && item.date <= monthEnd);
-    const pendingCount = bookings.filter(item => item.status === "pending" && L.dateTimeValue(item.date, item.startTime) >= Date.now()).length;
+    const pendingCount = bookings.filter(item => item.status === "confirmed" && L.dateTimeValue(item.date, item.startTime) >= Date.now()).length;
     $("#statToday").textContent = todayList.length;
     $("#statPending").textContent = pendingCount;
     if ($("#pendingQuickCount")) $("#pendingQuickCount").textContent = pendingCount;
@@ -782,8 +782,8 @@
       view.innerHTML = `
         <div class="calendar-day-overview">
           <div class="calendar-day-stat"><strong>${activeBookings.length}</strong><span>Agendamentos ativos</span></div>
-          <div class="calendar-day-stat pending"><strong>${pendingCount}</strong><span>Aguardando confirmação</span></div>
-          <div class="calendar-day-stat confirmed"><strong>${confirmedCount}</strong><span>Confirmados</span></div>
+          <div class="calendar-day-stat pending"><strong>${pendingCount}</strong><span>Pendentes antigos</span></div>
+          <div class="calendar-day-stat confirmed"><strong>${confirmedCount}</strong><span>Agendados</span></div>
           <button class="button button-small" type="button" data-calendar-new-booking>+ Novo neste dia</button>
         </div>
         <div class="day-calendar">
@@ -932,6 +932,53 @@
     return [...new Set([primary, ...names].map(item => String(item || "").trim()).filter(Boolean))];
   }
 
+  function ensureBarberPhotoEditor() {
+    if ($("#barberPhotoEditor")) return;
+    const barbersField = $("#settingBarbers")?.closest("label");
+    if (!barbersField) return;
+    const section = document.createElement("div");
+    section.className = "barber-photo-editor full";
+    section.id = "barberPhotoEditor";
+    section.innerHTML = `
+      <div class="barber-photo-editor-head">
+        <div><span class="eyebrow">FOTOS DA EQUIPE</span><strong>Fotos dos barbeiros</strong><small>Essas fotos aparecem na equipe e na escolha do profissional. A foto da História continua separada.</small></div>
+        <button class="icon-action" id="refreshBarberPhotos" type="button">Atualizar lista</button>
+      </div>
+      <div class="barber-photo-list" id="barberPhotoList"></div>`;
+    barbersField.insertAdjacentElement("afterend", section);
+  }
+
+  function currentBarberNamesFromForm() {
+    return parseBarbers($("#settingBarbers")?.value, $("#settingProfessional")?.value.trim());
+  }
+
+  function renderBarberPhotoEditor() {
+    ensureBarberPhotoEditor();
+    const list = $("#barberPhotoList");
+    if (!list) return;
+    const settings = L.getSettings();
+    const names = currentBarberNamesFromForm();
+    list.innerHTML = names.map(name => {
+      const photo = settings.barberPhotos?.[name] || "";
+      const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
+      return `
+        <article class="barber-photo-item" data-barber-photo-name="${L.escapeHTML(name)}">
+          <div class="barber-photo-preview">${photo ? `<img src="${L.escapeHTML(photo)}" alt="${L.escapeHTML(name)}" />` : `<span>${L.escapeHTML(initials)}</span>`}</div>
+          <div><strong>${L.escapeHTML(name)}</strong><small>${name === $("#settingProfessional")?.value.trim() ? "Profissional principal" : "Barbeiro da agenda"}</small></div>
+          <label class="icon-action file-button">Trocar foto<input type="file" accept="image/jpeg,image/png,image/webp" data-barber-photo-file /></label>
+          <button class="icon-action danger" type="button" data-remove-barber-photo>Remover</button>
+        </article>`;
+    }).join("");
+  }
+
+  function barberPhotosForNames(names) {
+    const current = L.getSettings().barberPhotos || {};
+    return names.reduce((photos, name) => {
+      if (current[name]) photos[name] = current[name];
+      return photos;
+    }, {});
+  }
+
   function refreshBarberOptions() {
     const datalist = $("#barberOptions");
     if (!datalist) return;
@@ -940,7 +987,7 @@
 
   function loadSettingsForms() {
     const settings = L.getSettings();
-    $("#settingProfessional").value = settings.professional; if ($("#settingBarbers")) $("#settingBarbers").value = settings.barbers.join("\n"); refreshBarberOptions(); $("#settingWhatsappNumber").value = settings.whatsappNumber; $("#settingDisplayPhone").value = settings.displayPhone; $("#settingInstagram").value = settings.instagram; $("#settingInstagramUrl").value = settings.instagramUrl; $("#settingCity").value = settings.city; $("#settingAddress").value = settings.address; $("#settingBusinessDays").value = settings.businessDays; $("#settingBusinessHours").value = settings.businessHours; $("#settingBookingMessage").value = settings.bookingMessage; $("#settingCancellationPolicy").value = settings.cancellationPolicy; $("#settingGoogleMapsUrl").value = settings.googleMapsUrl || ""; $("#settingAboutTitle").value = settings.aboutTitle || ""; $("#settingAboutText").value = settings.aboutText || ""; $("#settingProfessionalBio").value = settings.professionalBio || ""; $("#settingPortfolioTitle").value = settings.portfolioTitle || ""; $("#settingPortfolioText").value = settings.portfolioText || ""; $("#settingTestimonialsTitle").value = settings.testimonialsTitle || ""; $("#settingTestimonialsText").value = settings.testimonialsText || ""; $("#settingProfessionalPhoto").value = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingProfessionalPhotoPreview").src = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingDepositEnabled").checked = Boolean(settings.depositEnabled); $("#settingDepositAmount").value = Number(settings.depositAmount) || 0; $("#settingPixKey").value = settings.pixKey || ""; $("#settingDepositMessage").value = settings.depositMessage || ""; $("#settingLoyaltyEnabled").checked = Boolean(settings.loyaltyEnabled); $("#settingLoyaltyGoal").value = Number(settings.loyaltyGoal) || 10; $("#settingLoyaltyReward").value = settings.loyaltyReward || ""; $("#settingShowPrices").checked = settings.showPrices;
+    $("#settingProfessional").value = settings.professional; if ($("#settingBarbers")) $("#settingBarbers").value = settings.barbers.join("\n"); refreshBarberOptions(); $("#settingWhatsappNumber").value = settings.whatsappNumber; $("#settingDisplayPhone").value = settings.displayPhone; $("#settingInstagram").value = settings.instagram; $("#settingInstagramUrl").value = settings.instagramUrl; $("#settingCity").value = settings.city; $("#settingAddress").value = settings.address; $("#settingBusinessDays").value = settings.businessDays; $("#settingBusinessHours").value = settings.businessHours; $("#settingBookingMessage").value = settings.bookingMessage; $("#settingCancellationPolicy").value = settings.cancellationPolicy; $("#settingGoogleMapsUrl").value = settings.googleMapsUrl || ""; $("#settingAboutTitle").value = settings.aboutTitle || ""; $("#settingAboutText").value = settings.aboutText || ""; $("#settingProfessionalBio").value = settings.professionalBio || ""; $("#settingPortfolioTitle").value = settings.portfolioTitle || ""; $("#settingPortfolioText").value = settings.portfolioText || ""; $("#settingTestimonialsTitle").value = settings.testimonialsTitle || ""; $("#settingTestimonialsText").value = settings.testimonialsText || ""; $("#settingProfessionalPhoto").value = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingProfessionalPhotoPreview").src = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingDepositEnabled").checked = Boolean(settings.depositEnabled); $("#settingDepositAmount").value = Number(settings.depositAmount) || 0; $("#settingPixKey").value = settings.pixKey || ""; $("#settingDepositMessage").value = settings.depositMessage || ""; $("#settingLoyaltyEnabled").checked = Boolean(settings.loyaltyEnabled); $("#settingLoyaltyGoal").value = Number(settings.loyaltyGoal) || 10; $("#settingLoyaltyReward").value = settings.loyaltyReward || ""; $("#settingShowPrices").checked = settings.showPrices; renderBarberPhotoEditor();
     const credentials = getCredentials(); $("#credentialName").value = credentials?.name || ""; $("#credentialEmail").value = credentials?.email || ""; $("#credentialPassword").value = ""; $("#credentialPasswordConfirm").value = "";
   }
   $("#settingProfessionalPhotoFile").addEventListener("change", async event => {

@@ -62,7 +62,7 @@ create table if not exists public.bookings (
   client_photo text not null default '',
   professional text not null,
   notes text not null default '',
-  status text not null default 'pending' check (status in ('pending','confirmed','completed','cancelled','no_show')),
+  status text not null default 'confirmed' check (status in ('pending','confirmed','completed','cancelled','no_show')),
   source text not null default 'site',
   cancellation_reason text,
   created_at timestamptz not null default now(),
@@ -135,6 +135,7 @@ create table if not exists public.testimonials (
 );
 
 alter table public.bookings add column if not exists client_photo text not null default '';
+alter table public.bookings alter column status set default 'confirmed';
 alter table public.clients add column if not exists is_existing_customer boolean not null default false;
 alter table public.testimonials add column if not exists client_phone text not null default '';
 alter table public.testimonials add column if not exists phone_digits text not null default '';
