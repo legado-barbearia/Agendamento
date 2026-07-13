@@ -1799,3 +1799,131 @@ body.scrolled .brand img{
     padding:13px;
   }
 }
+
+/* V41 - Primeiro acesso como cadastro principal */
+body:not(.profile-onboarding-open) #meus-horarios{
+  display:none!important;
+}
+.main-nav a[href="#meus-horarios"]{
+  display:none!important;
+}
+body.profile-onboarding-open{
+  overflow:hidden;
+}
+body.profile-onboarding-open .mobile-booking-cta,
+body.profile-onboarding-open #floatingWhatsapp{
+  opacity:0!important;
+  transform:translateY(14px) scale(.98)!important;
+  pointer-events:none!important;
+}
+body.profile-onboarding-open #meus-horarios{
+  position:fixed!important;
+  inset:0!important;
+  z-index:95!important;
+  display:grid!important;
+  align-content:center!important;
+  justify-items:center!important;
+  order:initial!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom))!important;
+  overflow:auto!important;
+  background:
+    radial-gradient(circle at 50% 0,rgba(215,180,74,.16),transparent 34%),
+    linear-gradient(180deg,rgba(1,8,14,.92),rgba(3,14,24,.98));
+  backdrop-filter:blur(14px);
+}
+body.profile-onboarding-open #meus-horarios .section-heading{
+  width:min(560px,100%)!important;
+  margin:0 auto 14px!important;
+  text-align:center!important;
+  opacity:1!important;
+  transform:none!important;
+}
+body.profile-onboarding-open #meus-horarios .section-heading h2{
+  font-size:clamp(28px,7vw,44px)!important;
+  margin-bottom:8px!important;
+}
+body.profile-onboarding-open #meus-horarios .section-heading p{
+  max-width:480px!important;
+  margin:0 auto!important;
+}
+body.profile-onboarding-open #meus-horarios .manage-grid{
+  width:min(560px,100%)!important;
+  display:block!important;
+  margin:0 auto!important;
+  opacity:1!important;
+  transform:none!important;
+}
+body.profile-onboarding-open #lookupForm,
+body.profile-onboarding-open #lookupResult{
+  display:none!important;
+}
+body.profile-onboarding-open #profileForm{
+  width:100%!important;
+  max-height:none!important;
+  padding:18px!important;
+  border-radius:22px!important;
+  background:
+    linear-gradient(145deg,rgba(239,215,126,.12),rgba(5,18,30,.96) 38%,rgba(2,10,18,.98))!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.48)!important;
+}
+body.profile-onboarding-open #profileForm label span{
+  color:#f5e9bd!important;
+}
+body.profile-onboarding-open #profileForm input,
+body.profile-onboarding-open #profileForm select,
+body.profile-onboarding-open #profileForm textarea{
+  background:rgba(0,8,15,.72)!important;
+  border:1px solid rgba(239,215,126,.24)!important;
+  color:#f7f2df!important;
+}
+body.profile-onboarding-open #profileForm input:focus,
+body.profile-onboarding-open #profileForm select:focus,
+body.profile-onboarding-open #profileForm textarea:focus{
+  border-color:rgba(239,215,126,.68)!important;
+  box-shadow:0 0 0 3px rgba(215,180,74,.11)!important;
+}
+body.profile-onboarding-open .profile-upload-field input{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.profile-onboarding-open .profile-upload-field strong{
+  min-height:50px!important;
+  border:1px dashed rgba(239,215,126,.35)!important;
+  border-radius:15px!important;
+  background:rgba(239,215,126,.07)!important;
+  display:grid!important;
+  gap:3px!important;
+  place-items:center!important;
+  color:#f7e7a9!important;
+  cursor:pointer!important;
+}
+body.profile-onboarding-open #profileSubmitButton{
+  width:100%!important;
+  min-height:46px!important;
+}
+@media(max-width:430px){
+  body.profile-onboarding-open #meus-horarios{
+    align-content:start!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+  body.profile-onboarding-open #profileForm{
+    padding:14px!important;
+    border-radius:18px!important;
+  }
+  body.profile-onboarding-open .profile-card-head{
+    grid-template-columns:54px minmax(0,1fr)!important;
+    gap:10px!important;
+  }
+  body.profile-onboarding-open .profile-avatar-preview{
+    width:54px!important;
+    height:54px!important;
+    border-radius:17px!important;
+  }
+}

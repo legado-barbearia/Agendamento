@@ -106,11 +106,18 @@
   }
 
   function renderWelcomeExperience() {
-    const client = L.getClients().find(item => item.phoneDigits && item.name && item.name !== "Cliente Legado");
+    const client = getSavedClientProfile();
     const title = $("#heroTitle");
     const text = $("#heroText");
     const cta = $("#heroPrimaryCta");
-    if (!title || !text || !cta || !client) return;
+    if (!title || !text || !cta) return;
+    if (!client) {
+      title.textContent = "Seu próximo corte começa antes mesmo de você sentar na cadeira.";
+      text.textContent = "Permita que a Legado conheça você, apresente sua história e conduza sua jornada até o horário ideal.";
+      cta.textContent = "Começar minha experiência";
+      cta.setAttribute("href", "#agendar");
+      return;
+    }
     const firstName = client.name.split(/\s+/).filter(Boolean)[0] || client.name;
     title.textContent = `Bem-vindo de volta, ${firstName}. Pronto para renovar seu visual?`;
     text.textContent = "Seu perfil ja esta salvo. Escolha sua experiencia e reserve o melhor horario para voltar a cadeira da Legado.";
@@ -702,6 +709,36 @@
     return L.getClients().find(client => client.phoneDigits === digits) || null;
   }
 
+  function getSavedClientProfile() {
+    return L.getClients().find(item => item.phoneDigits && item.name && item.name !== "Cliente Legado") || null;
+  }
+
+  function syncSavedClientIntoForms() {
+    const client = getSavedClientProfile();
+    if (!client) return false;
+    applyClientProfile(client, "all");
+    return true;
+  }
+
+  function setFirstAccessOpen(open) {
+    document.body.classList.toggle("profile-onboarding-open", Boolean(open));
+    if (open) {
+      renderProfileAvatar(getSavedClientProfile());
+      window.setTimeout(() => $("#profileName")?.focus(), 120);
+    }
+    updateMobileCta();
+  }
+
+  function showFirstAccessIfNeeded(force = false) {
+    const needsProfile = !getSavedClientProfile();
+    setFirstAccessOpen(force || needsProfile);
+    return needsProfile;
+  }
+
+  function closeFirstAccess() {
+    setFirstAccessOpen(false);
+  }
+
   function applyClientProfile(client, target = "all") {
     if (!client) return false;
     if (target === "all" || target === "profile") {
@@ -714,14 +751,14 @@
       renderProfileAvatar(client);
     }
     if (target === "all" || target === "booking") {
-      if ($("#clientName") && !$("#clientName").value.trim()) $("#clientName").value = client.name || "";
-      if ($("#clientPhone")) $("#clientPhone").value = client.phone || $("#clientPhone").value;
+      if ($("#clientName")) $("#clientName").value = client.name || "";
+      if ($("#clientPhone")) $("#clientPhone").value = client.phone || "";
       if ($("#clientPhotoData")) $("#clientPhotoData").value = client.photo || "";
       if ($("#notes") && client.notes && !$("#notes").value.trim()) $("#notes").value = client.notes;
     }
     if (target === "all" || target === "review") {
-      if ($("#reviewName")) $("#reviewName").value = client.name || $("#reviewName").value;
-      if ($("#reviewPhone")) $("#reviewPhone").value = client.phone || $("#reviewPhone").value;
+      if ($("#reviewName")) $("#reviewName").value = client.name || "";
+      if ($("#reviewPhone")) $("#reviewPhone").value = client.phone || "";
     }
     return true;
   }
@@ -849,6 +886,11 @@
     const target = Number(button.dataset.stepTarget);
     if (target < state.step) goToStep(target);
   }));
+  $$('a[href="#agendar"], [data-open-profile]').forEach(link => link.addEventListener("click", event => {
+    if (getSavedClientProfile()) return;
+    event.preventDefault();
+    showFirstAccessIfNeeded(true);
+  }));
   $$("[data-close-modal]").forEach(element => element.addEventListener("click", () => {
     elements.modal.classList.remove("open"); elements.modal.setAttribute("aria-hidden", "true");
   }));
@@ -869,7 +911,7 @@
     url.search = "";
     url.searchParams.set("telefone", lastBooking.phoneDigits || L.normalizePhone(lastBooking.phone));
     url.searchParams.set("codigo", lastBooking.code);
-    url.hash = "meus-horarios";
+    url.hash = "agendar";
     try { await navigator.clipboard.writeText(url.toString()); showToast("Link de consulta copiado. Ele funciona neste aparelho até a conexão online."); }
     catch { showToast("Não foi possível copiar o link.", true); }
   });
@@ -928,6 +970,7 @@
       applyClientProfile(client, "all");
       renderClientProfileCard(client);
       renderWelcomeExperience();
+      closeFirstAccess();
       showToast("Perfil salvo. Agora a Legado ja conhece voce.");
       return;
     } catch (error) {
@@ -1124,6 +1167,7 @@
       closePortfolioLightbox();
       elements.modal.classList.remove("open");
       elements.modal.setAttribute("aria-hidden", "true");
+      if (getSavedClientProfile()) closeFirstAccess();
     }
     const lightboxOpen = $("#portfolioLightbox").classList.contains("open");
     if (lightboxOpen && event.key === "ArrowLeft") showPortfolioImage((activePortfolioImageIndex - 1 + activePortfolioImages.length) % activePortfolioImages.length);
@@ -1141,7 +1185,7 @@
   function refreshData() {
     settings = L.getSettings(); services = L.getServices(); availability = L.getAvailability();
     if (state.serviceId) state.service = services.find(item => item.id === state.serviceId) || null;
-    applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); updateSummary(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderBusinessStatus(); renderWelcomeExperience();
+    applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); updateSummary(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderBusinessStatus(); syncSavedClientIntoForms(); renderWelcomeExperience();
   }
 
   window.addEventListener("storage", refreshData);
@@ -1154,7 +1198,7 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 
-  applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); renderBarbers(); renderPortfolio(); renderTestimonials(); renderWelcomeExperience(); goToStep(1); observeReveals();
+  applySettings(); buildPublicServices(); buildServiceChoices(); buildDates(); buildTimes(); renderBarbers(); renderPortfolio(); renderTestimonials(); syncSavedClientIntoForms(); renderWelcomeExperience(); goToStep(1); observeReveals(); showFirstAccessIfNeeded();
 
   const query = new URLSearchParams(location.search);
   if (query.get("telefone") && query.get("codigo")) {
