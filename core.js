@@ -277,7 +277,7 @@
   function getSettings() {
     const raw = loadRaw(KEYS.settings, DEFAULT_SETTINGS);
     const merged = { ...clone(DEFAULT_SETTINGS), ...(raw && typeof raw === "object" ? raw : {}) };
-    if (!raw?.professionalPhoto || raw.professionalPhoto === "assets/logo.webp" || raw.professionalPhoto === "assets/logo.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.webp") {
+    if (!raw?.professionalPhoto || raw.professionalPhoto === "assets/logo.png" || raw.professionalPhoto === "assets/gilliel-apresentacao.webp") {
       merged.professionalPhoto = "assets/legado-gilliel-fundador.jpg";
     }
     if (!raw?.googleMapsUrl || raw.googleMapsUrl === "https://www.google.com/maps/search/?api=1&query=Av.%20Ant%C3%B4nio%20Carlos%20Paniago%2C%20Mineiros%20GO") {

@@ -1,11 +1,11 @@
-const CACHE = "legado-v38-perfil-mobile";
+const CACHE = "legado-v39-limpeza-assets";
 const ASSETS = [
   "./", "./index.html", "./admin.html", "./privacidade.html", "./styles.css", "./admin.css", "./core.js", "./app.js", "./admin.js", "./supabase-bridge.js", "./manifest.webmanifest",
-  "./assets/logo.png", "./assets/logo-192.png", "./assets/logo-512.png", "./assets/favicon.png", "./assets/gilliel-apresentacao.webp", "./assets/corte.webp", "./assets/barba.webp", "./assets/produtos.webp", "./assets/agendamento.webp",
+  "./assets/logo.png", "./assets/logo-192.png", "./assets/favicon.png", "./assets/gilliel-apresentacao.webp", "./assets/corte.webp", "./assets/barba.webp", "./assets/produtos.webp", "./assets/agendamento.webp",
   "./assets/admin-app-background.png",
-  "./assets/app-icon-source.jpg", "./assets/app-icon-192.png", "./assets/app-icon-512.png", "./assets/app-icon-1024.png",
+  "./assets/app-icon-192.png", "./assets/app-icon-512.png", "./assets/app-icon-1024.png",
   "./assets/legado-atendimento-classico.jpg", "./assets/legado-barba-degrade.jpg", "./assets/legado-barba-social.jpg", "./assets/legado-degrade-costas.jpg", "./assets/legado-degrade-duplo.jpg",
-  "./assets/legado-gilliel-atendimento-infantil.jpg", "./assets/legado-gilliel-fundador.jpg", "./assets/legado-gilliel-retrato-premium.jpg",
+  "./assets/legado-gilliel-atendimento-infantil.jpg", "./assets/legado-gilliel-fundador.jpg",
   "./assets/legado-infantil-degrade-processo.jpg", "./assets/legado-infantil-desenho.jpg", "./assets/legado-infantil-social.jpg", "./assets/legado-tesoura-detalhe.jpg"
 ];
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));

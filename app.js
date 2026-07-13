@@ -43,14 +43,14 @@
   }
 
   async function optimizeImage(file, maxDimension = 900, quality = 0.78) {
-    if (!file || !file.type.startsWith("image/")) throw new Error("Escolha uma imagem vÃ¡lida.");
-    if (file.size > 12 * 1024 * 1024) throw new Error("A imagem Ã© muito grande. Escolha um arquivo com atÃ© 12 MB.");
+    if (!file || !file.type.startsWith("image/")) throw new Error("Escolha uma imagem válida.");
+    if (file.size > 12 * 1024 * 1024) throw new Error("A imagem é muito grande. Escolha um arquivo com até 12 MB.");
     const objectUrl = URL.createObjectURL(file);
     try {
       const image = new Image();
       await new Promise((resolve, reject) => {
         image.onload = resolve;
-        image.onerror = () => reject(new Error("NÃ£o foi possÃ­vel ler a imagem."));
+        image.onerror = () => reject(new Error("Não foi possível ler a imagem."));
         image.src = objectUrl;
       });
       const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
@@ -78,7 +78,7 @@
     const allDayBlocked = blocks.some(block => block.date === todayIso && block.allDay);
     const periods = !allDayBlocked && todayConfig?.enabled ? (todayConfig.periods || []) : [];
     const activePeriod = periods.find(period => currentMinutes >= L.timeToMinutes(period.start) && currentMinutes < L.timeToMinutes(period.end));
-    if (activePeriod) return { open: true, text: `Aberto agora Â· atÃ© ${activePeriod.end}` };
+    if (activePeriod) return { open: true, text: `Aberto agora · até ${activePeriod.end}` };
 
     for (let offset = 0; offset <= 8; offset += 1) {
       const date = new Date(now);
@@ -89,8 +89,8 @@
       if (!config?.enabled || !config.periods?.length || blocks.some(block => block.date === iso && block.allDay)) continue;
       const candidate = config.periods.find(period => offset > 0 || L.timeToMinutes(period.start) > currentMinutes);
       if (!candidate) continue;
-      const dayLabel = offset === 0 ? "hoje" : offset === 1 ? "amanhÃ£" : date.toLocaleDateString("pt-BR", { weekday: "long" });
-      return { open: false, text: `Fechado Â· abre ${dayLabel} ${candidate.start}` };
+      const dayLabel = offset === 0 ? "hoje" : offset === 1 ? "amanhã" : date.toLocaleDateString("pt-BR", { weekday: "long" });
+      return { open: false, text: `Fechado · abre ${dayLabel} ${candidate.start}` };
     }
     return { open: false, text: "Fechado no momento" };
   }
@@ -131,7 +131,7 @@
     activePortfolioImageIndex = Math.max(0, Math.min(activePortfolioImages.length - 1, Number(index) || 0));
     const image = activePortfolioImages[activePortfolioImageIndex];
     $("#lightboxImage").src = image;
-    $("#lightboxImage").alt = `${activePortfolioItem?.alt || activePortfolioItem?.title || "Trabalho Legado"} â€” foto ${activePortfolioImageIndex + 1}`;
+    $("#lightboxImage").alt = `${activePortfolioItem?.alt || activePortfolioItem?.title || "Trabalho Legado"} — foto ${activePortfolioImageIndex + 1}`;
     $$(".lightbox-thumb").forEach((thumb, thumbIndex) => thumb.classList.toggle("active", thumbIndex === activePortfolioImageIndex));
     $("#lightboxCounter").textContent = `Foto ${activePortfolioImageIndex + 1} de ${activePortfolioImages.length}`;
     $("#lightboxPrev").disabled = activePortfolioImages.length <= 1;
@@ -148,11 +148,11 @@
     settings = L.getSettings();
     const photo = $("#professionalPhoto");
     if (photo) { photo.src = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; photo.alt = `${settings.professional}, profissional da ${settings.businessName}`; }
-    const oldTitle = "TradiÃƒÂ§ÃƒÂ£o, tÃƒÂ©cnica e personalidade em cada detalhe.";
-    const oldText = "A Legado Barbearia nasceu para oferecer uma experiÃƒÂªncia completa: atendimento com hora marcada, ambiente sofisticado e cuidado pensado para valorizar o estilo de cada cliente.";
-    $("#aboutEyebrow").textContent = settings.aboutEyebrow === "CONHEÃƒâ€¡A A LEGADO" ? "NOSSA HISTÃƒâ€œRIA" : settings.aboutEyebrow;
+    const oldTitle = "Tradição, técnica e personalidade em cada detalhe.";
+    const oldText = "A Legado Barbearia nasceu para oferecer uma experiência completa: atendimento com hora marcada, ambiente sofisticado e cuidado pensado para valorizar o estilo de cada cliente.";
+    $("#aboutEyebrow").textContent = settings.aboutEyebrow === "CONHEÇA A LEGADO" ? "NOSSA HISTÓRIA" : settings.aboutEyebrow;
     $("#aboutTitle").textContent = settings.aboutTitle === oldTitle ? "Uma barbearia criada para deixar legado." : settings.aboutTitle;
-    $("#aboutText").textContent = settings.aboutText === oldText ? "A Legado nasceu em Mineiros com uma ideia simples: transformar o cuidado masculino em um momento de respeito, presenÃƒÂ§a e identidade. Cada corte, barba e acabamento carrega atenÃƒÂ§ÃƒÂ£o aos detalhes, conversa boa e o compromisso de fazer o cliente sair se reconhecendo melhor no espelho." : settings.aboutText;
+    $("#aboutText").textContent = settings.aboutText === oldText ? "A Legado nasceu em Mineiros com uma ideia simples: transformar o cuidado masculino em um momento de respeito, presença e identidade. Cada corte, barba e acabamento carrega atenção aos detalhes, conversa boa e o compromisso de fazer o cliente sair se reconhecendo melhor no espelho." : settings.aboutText;
     $("#professionalName").textContent = settings.professional;
     $("#professionalBio").textContent = settings.professionalBio;
     $("#mapButton").href = settings.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${settings.address}, ${settings.city}`)}`;
@@ -175,9 +175,9 @@
             <span>${L.escapeHTML(initials || "LG")}</span>
           </div>
           <div>
-            <small>${isPrimary ? "RESPONSÃVEL PELA CASA" : "BARBEIRO LEGADO"}</small>
+            <small>${isPrimary ? "RESPONSÁVEL PELA CASA" : "BARBEIRO LEGADO"}</small>
             <h3>${L.escapeHTML(name)}</h3>
-            <p>${isPrimary ? L.escapeHTML(settings.professionalBio || "Atendimento cuidadoso, tÃ©cnica e acabamento alinhado ao padrÃ£o Legado.") : "Atendimento com hora marcada, cuidado no acabamento e respeito ao estilo de cada cliente."}</p>
+            <p>${isPrimary ? L.escapeHTML(settings.professionalBio || "Atendimento cuidadoso, técnica e acabamento alinhado ao padrão Legado.") : "Atendimento com hora marcada, cuidado no acabamento e respeito ao estilo de cada cliente."}</p>
           </div>
         </article>`;
     }).join("");
@@ -213,7 +213,7 @@
       <article class="portfolio-card reveal ${item.featured ? "featured" : ""}" data-portfolio-id="${L.escapeHTML(item.id)}" tabindex="0" role="button" aria-label="Abrir ${L.escapeHTML(item.title)}">
         <img src="${L.escapeHTML(item.image)}" alt="${L.escapeHTML(item.alt)}" loading="lazy" />
         ${galleryCount > 1 ? `<span class="portfolio-gallery-badge">${galleryCount} fotos</span>` : ""}
-        <span class="portfolio-open" aria-hidden="true">â†—</span>
+        <span class="portfolio-open" aria-hidden="true">↗</span>
         <div class="portfolio-card-content"><span>${L.escapeHTML(item.category)}</span><h3>${L.escapeHTML(item.title)}</h3><p>${L.escapeHTML(item.summary || item.description)}</p></div>
       </article>`;
     }).join("");
@@ -241,27 +241,27 @@
     const items = L.getTestimonials();
     const section = $("#avaliacoes");
     if (section) section.classList.remove("hidden");
-    $("#testimonialsEyebrow").textContent = settings.testimonialsEyebrow || "AVALIAÃ‡Ã•ES";
-    $("#testimonialsTitle").textContent = settings.testimonialsTitle || "Quem vive a experiÃªncia, recomenda.";
+    $("#testimonialsEyebrow").textContent = settings.testimonialsEyebrow || "AVALIAÇÕES";
+    $("#testimonialsTitle").textContent = settings.testimonialsTitle || "Quem vive a experiência, recomenda.";
     $("#testimonialsText").textContent = settings.testimonialsText || "Depoimentos reais dos clientes da Legado.";
     if (!items.length) {
       clearInterval(testimonialsTimer);
       $("#testimonialsGrid").innerHTML = `
         <article class="testimonial-card testimonial-invite reveal">
-          <div class="testimonial-stars" aria-label="ExperiÃªncia Legado">â˜…â˜…â˜…â˜…â˜…</div>
-          <blockquote>Atendimento com hora marcada, cuidado no acabamento e uma experiÃªncia pensada para vocÃª sair pronto para o prÃ³ximo compromisso.</blockquote>
-          <div class="testimonial-author"><strong>Legado Barbearia</strong><span>Seu feedback tambÃ©m pode aparecer aqui</span></div>
+          <div class="testimonial-stars" aria-label="Experiência Legado">★★★★★</div>
+          <blockquote>Atendimento com hora marcada, cuidado no acabamento e uma experiência pensada para você sair pronto para o próximo compromisso.</blockquote>
+          <div class="testimonial-author"><strong>Legado Barbearia</strong><span>Seu feedback também pode aparecer aqui</span></div>
         </article>`;
       observeReveals();
       return;
     }
     $("#testimonialsGrid").innerHTML = items.map(item => `
       <article class="testimonial-card reveal">
-        <div class="testimonial-stars" aria-label="${item.rating} de 5 estrelas">${"â˜…".repeat(item.rating)}${"â˜†".repeat(5-item.rating)}</div>
+        <div class="testimonial-stars" aria-label="${item.rating} de 5 estrelas">${"★".repeat(item.rating)}${"☆".repeat(5-item.rating)}</div>
         <blockquote>${L.escapeHTML(item.text)}</blockquote>
         <div class="testimonial-author">
           ${item.photo ? `<img class="testimonial-avatar" src="${L.escapeHTML(item.photo)}" alt="${L.escapeHTML(item.name)}" loading="lazy" />` : ""}
-          <div><strong>${L.escapeHTML(item.name)}</strong><span>${L.escapeHTML(item.service)}${item.createdAt ? ` Â· ${L.escapeHTML(L.formatDate(item.createdAt.slice(0, 10), { month: "short", year: "numeric" }))}` : ""}</span></div>
+          <div><strong>${L.escapeHTML(item.name)}</strong><span>${L.escapeHTML(item.service)}${item.createdAt ? ` · ${L.escapeHTML(L.formatDate(item.createdAt.slice(0, 10), { month: "short", year: "numeric" }))}` : ""}</span></div>
         </div>
       </article>`).join("");
     startTestimonialsCarousel();
@@ -281,20 +281,20 @@
   function serviceMeta(service) {
     const pieces = [`${service.durationMinutes} min`];
     if (settings.showPrices && service.price > 0) pieces.push(L.formatCurrency(service.price));
-    return pieces.join(" Â· ");
+    return pieces.join(" · ");
   }
 
   function buildPublicServices() {
     services = L.getServices();
     if (!services.length) {
-      elements.publicServices.innerHTML = '<div class="availability-note">Os serviÃ§os estÃ£o sendo atualizados. Fale conosco pelo WhatsApp.</div>';
+      elements.publicServices.innerHTML = '<div class="availability-note">Os serviços estão sendo atualizados. Fale conosco pelo WhatsApp.</div>';
       return;
     }
     elements.publicServices.innerHTML = services.map(service => `
       <article class="service-card reveal" data-service-card="${L.escapeHTML(service.id)}" tabindex="0" role="button" aria-label="Agendar ${L.escapeHTML(service.name)}">
-        <img src="${L.escapeHTML(L.resolveMediaSource(service.icon))}" alt="Ãcone do serviÃ§o ${L.escapeHTML(service.name)}" loading="lazy" />
+        <img src="${L.escapeHTML(L.resolveMediaSource(service.icon))}" alt="Ícone do serviço ${L.escapeHTML(service.name)}" loading="lazy" />
         <div><h3>${L.escapeHTML(service.name)}</h3><p>${L.escapeHTML(service.description)}</p></div>
-        <span>${service.durationMinutes} minutos${settings.showPrices && service.price > 0 ? ` Â· <b class="price-tag">${L.escapeHTML(L.formatCurrency(service.price))}</b>` : ""}</span>
+        <span>${service.durationMinutes} minutos${settings.showPrices && service.price > 0 ? ` · <b class="price-tag">${L.escapeHTML(L.formatCurrency(service.price))}</b>` : ""}</span>
         <strong class="service-select-cta">Selecionar</strong>
       </article>`).join("");
     observeReveals();
@@ -366,11 +366,11 @@
   }
   function selectDate(date) {
     if (!date || date < L.todayISO() || date > maxBookingDate()) {
-      showToast("Escolha uma data dentro do perÃ­odo permitido.", true);
+      showToast("Escolha uma data dentro do período permitido.", true);
       return false;
     }
     if (!dateIsOpen(date)) {
-      showToast("A barbearia nÃ£o atende nesta data.", true);
+      showToast("A barbearia não atende nesta data.", true);
       return false;
     }
     state.date = date;
@@ -384,24 +384,24 @@
 
   function buildTimes() {
     if (!state.date || !state.service) {
-      elements.times.innerHTML = '<p class="availability-note">Escolha o serviÃ§o e a data para ver os horÃ¡rios.</p>';
+      elements.times.innerHTML = '<p class="availability-note">Escolha o serviço e a data para ver os horários.</p>';
       return;
     }
     const professional = elements.professional.value || settings.professional;
     const slots = L.generateSlots(state.date, state.service.durationMinutes, { professional }).filter(slot => slot.available !== false);
     if (!slots.length) {
-      elements.times.innerHTML = '<p class="availability-note">NÃ£o hÃ¡ horÃ¡rios disponÃ­veis para este serviÃ§o nesta data. Tente outro dia.</p>';
+      elements.times.innerHTML = '<p class="availability-note">Não há horários disponíveis para este serviço nesta data. Tente outro dia.</p>';
       return;
     }
     const groups = [
-      { label: "ManhÃ£", items: slots.filter(slot => L.timeToMinutes(slot.startTime) < 720) },
+      { label: "Manhã", items: slots.filter(slot => L.timeToMinutes(slot.startTime) < 720) },
       { label: "Tarde", items: slots.filter(slot => L.timeToMinutes(slot.startTime) >= 720 && L.timeToMinutes(slot.startTime) < 1080) },
       { label: "Noite", items: slots.filter(slot => L.timeToMinutes(slot.startTime) >= 1080) }
     ].filter(group => group.items.length);
     elements.times.innerHTML = `
       <div class="time-context">
         <strong>${L.escapeHTML(state.service.name)}</strong>
-        <span>${state.service.durationMinutes} min Â· ${L.escapeHTML(professional)}</span>
+        <span>${state.service.durationMinutes} min · ${L.escapeHTML(professional)}</span>
       </div>
       ${groups.map(group => `
         <section class="time-period">
@@ -409,7 +409,7 @@
           <div class="time-period-grid">
             ${group.items.map(slot => `
               <button type="button" class="time-button ${state.time === slot.startTime ? "selected" : ""}" data-time="${slot.startTime}">
-                ${slot.startTime}<small>atÃ© ${slot.endTime}</small>
+                ${slot.startTime}<small>até ${slot.endTime}</small>
               </button>`).join("")}
           </div>
         </section>`).join("")}`;
@@ -418,7 +418,7 @@
     if (!state.service || !state.date) return;
     if (!L.isSlotAvailable({ date: state.date, startTime: time, durationMinutes: state.service.durationMinutes, professional: elements.professional.value || settings.professional })) {
       buildTimes();
-      showToast("Esse horÃ¡rio nÃ£o estÃ¡ mais disponÃ­vel.", true);
+      showToast("Esse horário não está mais disponível.", true);
       return;
     }
     state.time = time;
@@ -429,11 +429,11 @@
 
   function updateSummary() {
     const parts = [];
-    if (state.service) parts.push(`${state.service.name} Â· ${serviceMeta(state.service)}`);
+    if (state.service) parts.push(`${state.service.name} · ${serviceMeta(state.service)}`);
     if (state.dateLabel) parts.push(state.dateLabel);
     if (elements.professional.value) parts.push(elements.professional.value);
-    if (state.time) parts.push(`${state.time}â€“${L.addMinutes(state.time, state.service.durationMinutes)}`);
-    elements.summary.textContent = parts.length ? parts.join(" Â· ") : "Selecione um serviÃ§o para comeÃ§ar.";
+    if (state.time) parts.push(`${state.time}–${L.addMinutes(state.time, state.service.durationMinutes)}`);
+    elements.summary.textContent = parts.length ? parts.join(" · ") : "Selecione um serviço para começar.";
     renderBookingReview();
   }
 
@@ -441,21 +441,21 @@
     const review = $("#bookingReview");
     if (!review) return;
     if (!state.service || !state.date || !state.time) {
-      review.innerHTML = '<strong>Resumo do horÃ¡rio</strong><p>Escolha serviÃ§o, data e horÃ¡rio para revisar antes de confirmar.</p>';
+      review.innerHTML = '<strong>Resumo do horário</strong><p>Escolha serviço, data e horário para revisar antes de confirmar.</p>';
       return;
     }
     const professional = elements.professional.value || settings.professional;
     const endTime = L.addMinutes(state.time, state.service.durationMinutes);
     review.innerHTML = `
       <div class="booking-review-head">
-        <span>HORÃRIO ESCOLHIDO</span>
-        <strong>${L.escapeHTML(state.time)} Ã s ${L.escapeHTML(endTime)}</strong>
+        <span>HORÁRIO ESCOLHIDO</span>
+        <strong>${L.escapeHTML(state.time)} às ${L.escapeHTML(endTime)}</strong>
       </div>
       <div class="booking-review-grid">
-        <div><small>ServiÃ§o</small><b>${L.escapeHTML(state.service.name)}</b></div>
+        <div><small>Serviço</small><b>${L.escapeHTML(state.service.name)}</b></div>
         <div><small>Data</small><b>${L.escapeHTML(L.formatDate(state.date, { day: "2-digit", month: "short" }))}</b></div>
         <div><small>Barbeiro</small><b>${L.escapeHTML(professional)}</b></div>
-        <div><small>DuraÃ§Ã£o</small><b>${state.service.durationMinutes} min</b></div>
+        <div><small>Duração</small><b>${state.service.durationMinutes} min</b></div>
       </div>`;
   }
   function showInlineMessage(message) {
@@ -471,21 +471,21 @@
   }
 
   function validateStep() {
-    if (state.step === 1 && !state.service) return showInlineMessage("Selecione um serviÃ§o.");
+    if (state.step === 1 && !state.service) return showInlineMessage("Selecione um serviço.");
     if (state.step === 2 && !state.date) return showInlineMessage("Escolha uma data.");
-    if (state.step === 3 && !state.time) return showInlineMessage("Selecione um horÃ¡rio disponÃ­vel.");
+    if (state.step === 3 && !state.time) return showInlineMessage("Selecione um horário disponível.");
     if (state.step === 3 && !L.isSlotAvailable({ date: state.date, startTime: state.time, durationMinutes: state.service.durationMinutes, professional: elements.professional.value || settings.professional })) {
       state.time = "";
       buildTimes();
-      return showInlineMessage("Esse horÃ¡rio ficou indisponÃ­vel. Escolha outro.");
+      return showInlineMessage("Esse horário ficou indisponível. Escolha outro.");
     }
     if (state.step === 4) {
       const name = $("#clientName");
       const phone = $("#clientPhone");
       const consent = $("#privacyConsent");
       if (name.value.trim().length < 3) { name.focus(); return showInlineMessage("Informe seu nome completo."); }
-      if (L.normalizePhone(phone.value).length < 10) { phone.focus(); return showInlineMessage("Informe um WhatsApp vÃ¡lido."); }
-      if (!consent.checked) { consent.focus(); return showInlineMessage("Marque a autorizaÃ§Ã£o para continuar."); }
+      if (L.normalizePhone(phone.value).length < 10) { phone.focus(); return showInlineMessage("Informe um WhatsApp válido."); }
+      if (!consent.checked) { consent.focus(); return showInlineMessage("Marque a autorização para continuar."); }
     }
     return true;
   }
@@ -506,7 +506,7 @@
     if (!L.isSlotAvailable({ date: state.date, startTime: state.time, durationMinutes: state.service.durationMinutes, professional: elements.professional.value || settings.professional })) {
       state.time = "";
       goToStep(3);
-      showInlineMessage("Esse horÃ¡rio jÃ¡ foi reservado. Escolha outro.");
+      showInlineMessage("Esse horário já foi reservado. Escolha outro.");
       return;
     }
     const now = new Date().toISOString();
@@ -537,7 +537,7 @@
       state.time = "";
       goToStep(3);
       buildTimes();
-      showInlineMessage("Esse horÃ¡rio acabou de ser reservado. Escolha outro.");
+      showInlineMessage("Esse horário acabou de ser reservado. Escolha outro.");
       return;
     }
     const booking = reservation.booking;
@@ -557,12 +557,12 @@
     elements.confirmationCode.textContent = booking.code;
     elements.confirmationSummary.innerHTML = `
       <strong>Cliente:</strong> ${L.escapeHTML(booking.name)}<br>
-      <strong>ServiÃ§o:</strong> ${L.escapeHTML(booking.service)}${booking.priceValue > 0 ? ` Â· ${L.escapeHTML(L.formatCurrency(booking.priceValue))}` : ""}<br>
+      <strong>Serviço:</strong> ${L.escapeHTML(booking.service)}${booking.priceValue > 0 ? ` · ${L.escapeHTML(L.formatCurrency(booking.priceValue))}` : ""}<br>
       <strong>Data:</strong> ${L.escapeHTML(L.formatDate(booking.date))}<br>
-      <strong>HorÃ¡rio:</strong> ${booking.startTime} Ã s ${booking.endTime}<br>
+      <strong>Horário:</strong> ${booking.startTime} às ${booking.endTime}<br>
       <strong>Profissional:</strong> ${L.escapeHTML(booking.professional)}<br>
-      <strong>Status:</strong> Pendente â€” aguardando confirmaÃ§Ã£o da barbearia
-      ${booking.notes ? `<br><strong>ObservaÃ§Ã£o:</strong> ${L.escapeHTML(booking.notes)}` : ""}`;
+      <strong>Status:</strong> Pendente — aguardando confirmação da barbearia
+      ${booking.notes ? `<br><strong>Observação:</strong> ${L.escapeHTML(booking.notes)}` : ""}`;
     const depositBox = $("#depositBox");
     const showDeposit = settings.depositEnabled && Number(settings.depositAmount) > 0 && String(settings.pixKey || "").trim();
     depositBox.classList.toggle("hidden", !showDeposit);
@@ -571,11 +571,11 @@
     elements.modal.setAttribute("aria-hidden", "false");
   }
 
-  function whatsappMessage(booking, intro = "OlÃ¡! Gostaria de confirmar meu agendamento na Legado Barbearia.") {
+  function whatsappMessage(booking, intro = "Olá! Gostaria de confirmar meu agendamento na Legado Barbearia.") {
     return [
-      intro, "", `*CÃ³digo:* ${booking.code}`, `*Nome:* ${booking.name}`, `*ServiÃ§o:* ${booking.service}${booking.priceValue > 0 ? ` Â· ${L.formatCurrency(booking.priceValue)}` : ""}`,
-      `*Data:* ${L.formatDate(booking.date)}`, `*HorÃ¡rio:* ${booking.startTime} Ã s ${booking.endTime}`, `*Profissional:* ${booking.professional}`,
-      booking.notes ? `*ObservaÃ§Ã£o:* ${booking.notes}` : ""
+      intro, "", `*Código:* ${booking.code}`, `*Nome:* ${booking.name}`, `*Serviço:* ${booking.service}${booking.priceValue > 0 ? ` · ${L.formatCurrency(booking.priceValue)}` : ""}`,
+      `*Data:* ${L.formatDate(booking.date)}`, `*Horário:* ${booking.startTime} às ${booking.endTime}`, `*Profissional:* ${booking.professional}`,
+      booking.notes ? `*Observação:* ${booking.notes}` : ""
     ].filter(Boolean).join("\n");
   }
 
@@ -590,7 +590,7 @@
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Legado Barbearia//Agenda//PT-BR", "BEGIN:VEVENT",
       `UID:${booking.id}@legadobarbearia`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`,
       `DTSTART:${compact(booking.date, booking.startTime)}`, `DTEND:${compact(booking.date, booking.endTime)}`,
-      `SUMMARY:${booking.service} - Legado Barbearia`, `DESCRIPTION:CÃ³digo ${booking.code}. Profissional: ${booking.professional}.`,
+      `SUMMARY:${booking.service} - Legado Barbearia`, `DESCRIPTION:Código ${booking.code}. Profissional: ${booking.professional}.`,
       `LOCATION:${settings.address}, ${settings.city}`, "END:VEVENT", "END:VCALENDAR"
     ].join("\r\n");
     L.downloadFile(`legado-${booking.code}.ics`, content, "text/calendar;charset=utf-8");
@@ -614,7 +614,7 @@
     const number = String(settings.whatsappNumber).replace(/\D/g, "");
     const whatsappUrl = `https://wa.me/${number}`;
     const mapUrl = settings.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${settings.address}, ${settings.city}`)}`;
-    const reviewMessage = `OlÃ¡! Fui atendido na Legado Barbearia e gostaria de deixar uma avaliaÃ§Ã£o.`;
+    const reviewMessage = `Olá! Fui atendido na Legado Barbearia e gostaria de deixar uma avaliação.`;
     const contactLinks = [$("#floatingWhatsapp"), $("#visitWhatsapp")];
     contactLinks.filter(Boolean).forEach(link => link.href = whatsappUrl);
     const reviewLink = $("#reviewWhatsapp");
@@ -687,11 +687,11 @@
           <div><small>PERFIL LEGADO</small><h3>${L.escapeHTML(client.name)}</h3><p>${L.escapeHTML(client.phone)}</p></div>
         </div>
         <div class="client-profile-summary-grid">
-          <div><span>Cliente</span><strong>${client.existingCustomer ? "JÃƒÂ¡ conhece a Legado" : "Primeira experiÃƒÂªncia"}</strong></div>
+          <div><span>Cliente</span><strong>${client.existingCustomer ? "Já conhece a Legado" : "Primeira experiência"}</strong></div>
           <div><span>Criado em</span><strong>${L.escapeHTML(L.formatDate(client.createdAt || new Date().toISOString()))}</strong></div>
           <div><span>Atualizado</span><strong>${L.escapeHTML(L.formatDate(client.updatedAt || new Date().toISOString()))}</strong></div>
         </div>
-        ${client.notes ? `<p class="client-profile-note"><strong>PreferÃƒÂªncias:</strong> ${L.escapeHTML(client.notes)}</p>` : ""}
+        ${client.notes ? `<p class="client-profile-note"><strong>Preferências:</strong> ${L.escapeHTML(client.notes)}</p>` : ""}
         <div class="client-actions"><a class="button button-secondary" href="#agendar">Agendar com meu perfil</a></div>
       </article>`;
   }
@@ -701,21 +701,21 @@
     const upcoming = ["pending", "confirmed"].includes(booking.status) && L.dateTimeValue(booking.date, booking.startTime) > Date.now();
     elements.lookupResult.innerHTML = `
       <article class="client-booking" data-client-booking="${L.escapeHTML(booking.id)}">
-        <div class="client-booking-head"><div><h3>${L.escapeHTML(booking.service)}</h3><p>CÃ³digo ${L.escapeHTML(booking.code)} Â· ${L.escapeHTML(booking.name)}</p></div><span class="status-badge status-${booking.status}">${L.statusLabel(booking.status)}</span></div>
+        <div class="client-booking-head"><div><h3>${L.escapeHTML(booking.service)}</h3><p>Código ${L.escapeHTML(booking.code)} · ${L.escapeHTML(booking.name)}</p></div><span class="status-badge status-${booking.status}">${L.statusLabel(booking.status)}</span></div>
         <div class="client-booking-details">
           <div><span>Data</span><strong>${L.escapeHTML(L.formatDate(booking.date, { day: "2-digit", month: "long", year: "numeric" }))}</strong></div>
-          <div><span>HorÃ¡rio</span><strong>${booking.startTime}â€“${booking.endTime}</strong></div>
+          <div><span>Horário</span><strong>${booking.startTime}–${booking.endTime}</strong></div>
           <div><span>Profissional</span><strong>${L.escapeHTML(booking.professional)}</strong></div>
-          <div><span>DuraÃ§Ã£o</span><strong>${booking.durationMinutes} min</strong></div>
+          <div><span>Duração</span><strong>${booking.durationMinutes} min</strong></div>
           <div><span>Valor</span><strong>${booking.priceValue > 0 ? L.formatCurrency(booking.priceValue) : "A confirmar"}</strong></div>
           <div><span>WhatsApp</span><strong>${L.escapeHTML(booking.phone)}</strong></div>
         </div>
-        ${booking.notes ? `<p class="policy-note"><strong>ObservaÃ§Ã£o:</strong> ${L.escapeHTML(booking.notes)}</p>` : ""}
+        ${booking.notes ? `<p class="policy-note"><strong>Observação:</strong> ${L.escapeHTML(booking.notes)}</p>` : ""}
         ${settings.depositEnabled && Number(settings.depositAmount) > 0 && settings.pixKey ? `<div class="client-deposit-box"><strong>Sinal opcional/configurado:</strong> ${L.escapeHTML(L.formatCurrency(settings.depositAmount))}<br>Chave Pix: ${L.escapeHTML(settings.pixKey)}<br>${L.escapeHTML(settings.depositMessage)}</div>` : ""}
-        <p class="policy-note">${L.escapeHTML(settings.cancellationPolicy)} ${canCancel ? "Este agendamento ainda pode ser alterado pelo site." : upcoming ? "O prazo de alteraÃ§Ã£o pelo site terminou; fale com a barbearia." : ""}</p>
+        <p class="policy-note">${L.escapeHTML(settings.cancellationPolicy)} ${canCancel ? "Este agendamento ainda pode ser alterado pelo site." : upcoming ? "O prazo de alteração pelo site terminou; fale com a barbearia." : ""}</p>
         <div class="client-actions">
           <button class="button" type="button" data-client-action="whatsapp">Falar no WhatsApp</button>
-          <button class="button button-secondary" type="button" data-client-action="calendar">Adicionar ao calendÃ¡rio</button>
+          <button class="button button-secondary" type="button" data-client-action="calendar">Adicionar ao calendário</button>
           ${canCancel ? '<button class="button button-secondary" type="button" data-client-action="rebook">Reagendar</button><button class="button button-secondary" type="button" data-client-action="cancel">Cancelar</button>' : ""}
         </div>
       </article>`;
@@ -730,7 +730,7 @@
 
   function beginRebooking(booking) {
     const service = services.find(item => item.id === booking.serviceId) || services.find(item => item.name === booking.service);
-    if (!service) { showToast("Este serviÃ§o nÃ£o estÃ¡ mais disponÃ­vel.", true); return; }
+    if (!service) { showToast("Este serviço não está mais disponível.", true); return; }
     state.rebookingId = booking.id;
     selectService(service.id);
     state.date = ""; state.dateLabel = ""; state.time = "";
@@ -741,7 +741,7 @@
     $("#privacyConsent").checked = true;
     buildDates(); buildTimes(); updateSummary(); goToStep(2);
     $("#agendar").scrollIntoView({ behavior: "smooth" });
-    showToast("Escolha a nova data e o novo horÃ¡rio. O anterior serÃ¡ cancelado apÃ³s a confirmaÃ§Ã£o.");
+    showToast("Escolha a nova data e o novo horário. O anterior será cancelado após a confirmação.");
   }
 
   function cancelBooking(booking) {
@@ -750,7 +750,7 @@
     const updated = L.upsertBooking({ ...booking, status: "cancelled", cancellationReason: "Cancelado pelo cliente", updatedAt: new Date().toISOString() });
     renderLookup(updated);
     showToast("Agendamento cancelado.");
-    openWhatsApp(updated, "OlÃ¡! Cancelei este agendamento pelo site da Legado Barbearia.");
+    openWhatsApp(updated, "Olá! Cancelei este agendamento pelo site da Legado Barbearia.");
   }
 
   elements.next.addEventListener("click", () => {
@@ -793,8 +793,8 @@
   $("#calendarButton").addEventListener("click", () => lastBooking && downloadICS(lastBooking));
   $("#copyCodeButton").addEventListener("click", async () => {
     if (!lastBooking) return;
-    try { await navigator.clipboard.writeText(lastBooking.code); showToast("CÃ³digo copiado."); }
-    catch { showToast(`CÃ³digo: ${lastBooking.code}`); }
+    try { await navigator.clipboard.writeText(lastBooking.code); showToast("Código copiado."); }
+    catch { showToast(`Código: ${lastBooking.code}`); }
   });
   $("#copyPixButton").addEventListener("click", async () => {
     const key = String(settings.pixKey || "").trim(); if (!key) return;
@@ -807,8 +807,8 @@
     url.searchParams.set("telefone", lastBooking.phoneDigits || L.normalizePhone(lastBooking.phone));
     url.searchParams.set("codigo", lastBooking.code);
     url.hash = "meus-horarios";
-    try { await navigator.clipboard.writeText(url.toString()); showToast("Link de consulta copiado. Ele funciona neste aparelho atÃ© a conexÃ£o online."); }
-    catch { showToast("NÃ£o foi possÃ­vel copiar o link.", true); }
+    try { await navigator.clipboard.writeText(url.toString()); showToast("Link de consulta copiado. Ele funciona neste aparelho até a conexão online."); }
+    catch { showToast("Não foi possível copiar o link.", true); }
   });
 
   elements.professional.addEventListener("change", () => { state.time = ""; buildTimes(); updateSummary(); });
@@ -847,8 +847,8 @@
     const phoneDigits = L.normalizePhone(phone);
     const existingCustomer = $("#profileExistingCustomer").value;
     if (name.length < 2) return showToast("Informe seu nome para criar seu perfil.", true);
-    if (phoneDigits.length < 10) return showToast("Informe um WhatsApp vÃ¡lido.", true);
-    if (!existingCustomer) return showToast("Informe se vocÃª jÃ¡ Ã© cliente da Legado.", true);
+    if (phoneDigits.length < 10) return showToast("Informe um WhatsApp válido.", true);
+    if (!existingCustomer) return showToast("Informe se você já é cliente da Legado.", true);
     try {
       if (submitButton) {
         submitButton.disabled = true;
@@ -879,10 +879,10 @@
     const phone = L.formatPhone($("#reviewPhone").value);
     const phoneDigits = L.normalizePhone(phone);
     const text = $("#reviewText").value.trim();
-    if (name.length < 2) return showToast("Informe seu nome para enviar a avaliaÃ§Ã£o.", true);
-    if (phoneDigits.length < 10) return showToast("Informe um WhatsApp vÃ¡lido.", true);
-    if (text.length < 8) return showToast("Escreva um comentÃ¡rio um pouco maior.", true);
-    if (!$("#reviewConsent").checked) return showToast("Autorize o uso da avaliaÃ§Ã£o para continuar.", true);
+    if (name.length < 2) return showToast("Informe seu nome para enviar a avaliação.", true);
+    if (phoneDigits.length < 10) return showToast("Informe um WhatsApp válido.", true);
+    if (text.length < 8) return showToast("Escreva um comentário um pouco maior.", true);
+    if (!$("#reviewConsent").checked) return showToast("Autorize o uso da avaliação para continuar.", true);
     const existingClient = L.getClients().find(client => client.phoneDigits === phoneDigits);
     const photo = existingClient?.photo || "";
     const items = L.getTestimonials(true);
@@ -905,14 +905,14 @@
     L.setTestimonials(items);
     L.upsertClient({ name, phone, phoneDigits, photo, existingCustomer: existingClient?.existingCustomer || false, notes: existingClient?.notes || "" });
     $("#reviewForm").reset();
-    showToast("AvaliaÃ§Ã£o enviada. Ela aparecerÃ¡ no site depois da aprovaÃ§Ã£o.");
+    showToast("Avaliação enviada. Ela aparecerá no site depois da aprovação.");
   });
   $("#lookupCode").addEventListener("input", event => { event.target.value = event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8); });
   elements.lookupForm.addEventListener("submit", event => {
     event.preventDefault();
     const booking = lookupBooking($("#lookupPhone").value, $("#lookupCode").value);
     if (!booking) {
-      elements.lookupResult.innerHTML = '<div class="empty-state"><strong>Agendamento nÃ£o encontrado</strong><p>Confira o WhatsApp e o cÃ³digo. Nesta versÃ£o, a consulta funciona apenas no aparelho usado para agendar.</p></div>';
+      elements.lookupResult.innerHTML = '<div class="empty-state"><strong>Agendamento não encontrado</strong><p>Confira o WhatsApp e o código. Nesta versão, a consulta funciona apenas no aparelho usado para agendar.</p></div>';
       return;
     }
     renderLookup(booking);
@@ -922,7 +922,7 @@
     if (!action) return;
     const booking = L.getBookings().find(item => String(item.id) === String(elements.lookupResult.dataset.bookingId));
     if (!booking) return;
-    if (action === "whatsapp") openWhatsApp(booking, "OlÃ¡! Gostaria de falar sobre este agendamento na Legado Barbearia.");
+    if (action === "whatsapp") openWhatsApp(booking, "Olá! Gostaria de falar sobre este agendamento na Legado Barbearia.");
     if (action === "calendar") downloadICS(booking);
     if (action === "rebook") beginRebooking(booking);
     if (action === "cancel") cancelBooking(booking);
@@ -955,12 +955,12 @@
     const service = matchingServiceForPortfolio(activePortfolioItem);
     if (service) selectService(service.id);
     const notes = $("#notes");
-    const reference = `ReferÃªncia do portfÃ³lio: ${activePortfolioItem.title}`;
+    const reference = `Referência do portfólio: ${activePortfolioItem.title}`;
     if (notes && !notes.value.includes(reference)) notes.value = [notes.value.trim(), reference].filter(Boolean).join("\n");
     closePortfolioLightbox();
     goToStep(1);
     $("#agendar").scrollIntoView({ behavior: "smooth", block: "start" });
-    showToast("Estilo adicionado como referÃªncia do agendamento.");
+    showToast("Estilo adicionado como referência do agendamento.");
   });
   $("#sharePortfolioStyle").addEventListener("click", async () => {
     if (!activePortfolioItem) return;
@@ -968,8 +968,8 @@
     const data = { title: `${activePortfolioItem.title} | Legado Barbearia`, text: activePortfolioItem.description, url: shareUrl };
     try {
       if (navigator.share) await navigator.share(data);
-      else { await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`); showToast("Link do portfÃ³lio copiado."); }
-    } catch (error) { if (error?.name !== "AbortError") showToast("NÃ£o foi possÃ­vel compartilhar.", true); }
+      else { await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`); showToast("Link do portfólio copiado."); }
+    } catch (error) { if (error?.name !== "AbortError") showToast("Não foi possível compartilhar.", true); }
   });
   $$('[data-close-lightbox]').forEach(element => element.addEventListener("click", closePortfolioLightbox));
 
@@ -981,7 +981,7 @@
     header.classList.toggle("menu-open", open);
     document.body.classList.toggle("body-menu-open", open);
     menuButton.setAttribute("aria-expanded", String(open));
-    menuButton.textContent = open ? "Ã—" : "â˜°";
+    menuButton.textContent = open ? "×" : "☰";
   }
   menuButton.addEventListener("click", () => setMenuOpen(!nav.classList.contains("open")));
   nav.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setMenuOpen(false)));

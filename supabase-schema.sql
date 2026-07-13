@@ -152,6 +152,26 @@ alter table public.clients enable row level security;
 alter table public.portfolio enable row level security;
 alter table public.testimonials enable row level security;
 
+drop policy if exists "public read settings" on public.business_settings;
+drop policy if exists "public read active services" on public.services;
+drop policy if exists "public read availability" on public.availability;
+drop policy if exists "public read active portfolio" on public.portfolio;
+drop policy if exists "public read active testimonials" on public.testimonials;
+drop policy if exists "admins manage settings" on public.business_settings;
+drop policy if exists "admins manage services" on public.services;
+drop policy if exists "admins manage availability" on public.availability;
+drop policy if exists "admins manage blocks" on public.blocked_slots;
+drop policy if exists "admins manage bookings" on public.bookings;
+drop policy if exists "admins manage clients" on public.clients;
+drop policy if exists "admins manage portfolio" on public.portfolio;
+drop policy if exists "admins manage testimonials" on public.testimonials;
+drop policy if exists "users read own profile" on public.profiles;
+drop policy if exists "public create pending booking" on public.bookings;
+drop policy if exists "public create client profile" on public.clients;
+drop policy if exists "public read client profile" on public.clients;
+drop policy if exists "public update client profile" on public.clients;
+drop policy if exists "public create pending testimonial" on public.testimonials;
+
 -- Leitura pública somente do conteúdo necessário ao site.
 create policy "public read settings" on public.business_settings for select to anon, authenticated using (true);
 create policy "public read active services" on public.services for select to anon, authenticated using (active = true or auth.role() = 'authenticated');
@@ -254,6 +274,8 @@ $$;
 grant execute on function public.booked_intervals(date) to anon, authenticated;
 
 -- Consulta segura por telefone e código. Não lista agendamentos de terceiros.
+drop function if exists public.lookup_booking(text, text);
+
 create or replace function public.lookup_booking(p_phone_digits text, p_code text)
 returns table (
   id uuid, code text, service_name text, booking_date date, start_time time, end_time time,
