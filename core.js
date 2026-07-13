@@ -26,7 +26,7 @@
     city: "Mineiros - GO, 75830-000",
     businessDays: "Segunda a sábado",
     businessHours: "09h às 19h",
-    bookingMessage: "Seu horário será analisado e confirmado pela barbearia.",
+    bookingMessage: "Seu horário fica agendado na hora e deixa de aparecer para outras pessoas.",
     cancellationPolicy: "Cancelamentos e reagendamentos devem ser feitos com antecedência.",
     showPrices: true,
     aboutEyebrow: "NOSSA HISTÓRIA",
@@ -607,7 +607,7 @@
       clientPhoto: String(booking.clientPhoto || booking.photo || ""),
       professional: String(booking.professional || getSettings().professional),
       notes: String(booking.notes || ""),
-      status: VALID_STATUSES.includes(booking.status) ? booking.status : "pending",
+      status: VALID_STATUSES.includes(booking.status) ? booking.status : "confirmed",
       createdAt: booking.createdAt || new Date().toISOString(),
       updatedAt: booking.updatedAt || booking.createdAt || new Date().toISOString(),
       rescheduledFrom: booking.rescheduledFrom || null,
@@ -756,7 +756,7 @@
   }
 
   function reserveBooking(booking) {
-    const normalized = normalizeBooking({ ...booking, status: "pending" });
+    const normalized = normalizeBooking({ ...booking, status: booking.status || "confirmed" });
     const available = isSlotAvailable({
       date: normalized.date,
       startTime: normalized.startTime,

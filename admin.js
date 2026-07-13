@@ -233,7 +233,7 @@
   $("#openPendingBookings")?.addEventListener("click", () => {
     $("#bookingSearch").value = "";
     $("#bookingDateFilter").value = "";
-    $("#bookingStatusFilter").value = "pending";
+    $("#bookingStatusFilter").value = "confirmed";
     openPanel("bookings");
     renderBookings();
   });
@@ -269,9 +269,8 @@
           <button class="icon-action" data-booking-action="edit" type="button">Editar</button>
           <button class="icon-action" data-booking-action="whatsapp" type="button">WhatsApp</button>
           ${["pending", "confirmed"].includes(item.status) && L.dateTimeValue(item.date, item.startTime) > Date.now() ? '<button class="icon-action" data-booking-action="reminder" type="button">Lembrete</button>' : ""}
-          ${item.status === "pending" ? '<button class="icon-action confirm-action" data-booking-action="confirmed" type="button" title="Confirma este horário e impede outro atendimento do mesmo profissional">✓ Confirmar</button>' : ""}
           ${activeConflicts.length ? `<span class="booking-conflict-label" title="Existe outro registro concorrente para este profissional e horário">⚠ conflito</span>` : ""}
-          ${["pending", "confirmed"].includes(item.status) ? '<button class="icon-action" data-booking-action="completed" type="button">Concluir</button><button class="icon-action" data-booking-action="no_show" type="button">Faltou</button><button class="icon-action danger" data-booking-action="cancelled" type="button">Cancelar</button>' : ""}
+          ${["pending", "confirmed"].includes(item.status) ? '<button class="icon-action" data-booking-action="completed" type="button">Concluir</button><button class="icon-action" data-booking-action="no_show" type="button">Faltou</button><button class="icon-action danger" data-booking-action="cancelled" type="button">Desmarcar</button>' : ""}
           <button class="icon-action danger" data-booking-action="delete" type="button">Excluir</button>
         </div>
       </div>`;
@@ -305,32 +304,9 @@
       if (!window.confirm(`Excluir definitivamente o agendamento de ${booking.name}?`)) return;
       L.deleteBooking(booking.id); showToast("Agendamento excluído."); return;
     }
-    if (action === "confirmed") {
-      const firstCheck = L.confirmBooking(booking.id);
-      if (!firstCheck.ok && firstCheck.reason === "confirmed_conflict") {
-        const conflict = firstCheck.conflicts[0];
-        showToast(`Não foi possível confirmar: ${conflict.name} já está confirmado às ${conflict.startTime} com ${conflict.professional}.`, true);
-        return;
-      }
-      if (!firstCheck.ok && firstCheck.reason === "pending_conflict") {
-        const names = firstCheck.conflicts.map(item => `${item.name} (${item.code})`).join(", ");
-        const proceed = window.confirm(`Existe ${firstCheck.conflicts.length} solicitação pendente concorrente para o mesmo profissional e horário: ${names}.
-
-Confirmar ${booking.name} e cancelar automaticamente as solicitações concorrentes?`);
-        if (!proceed) return;
-        const result = L.confirmBooking(booking.id, { cancelPendingConflicts: true });
-        if (!result.ok) return showToast("Não foi possível confirmar o horário. Atualize a agenda e tente novamente.", true);
-        showToast(`Agendamento confirmado. ${result.cancelledConflicts.length} solicitação(ões) concorrente(s) cancelada(s).`);
-        return;
-      }
-      if (firstCheck.ok) {
-        showToast("Agendamento confirmado e horário protegido para este profissional.");
-        return;
-      }
-      return showToast("Não foi possível confirmar o agendamento.", true);
-    }
+    if (action === "cancelled" && !window.confirm(`Desmarcar o agendamento de ${booking.name}? O horário voltará a ficar disponível.`)) return;
     L.upsertBooking({ ...booking, status: action, updatedAt: new Date().toISOString() });
-    showToast(`Agendamento marcado como ${L.statusLabel(action).toLowerCase()}.`);
+    showToast(action === "cancelled" ? "Agendamento desmarcado. O horário foi liberado." : `Agendamento marcado como ${L.statusLabel(action).toLowerCase()}.`);
   });
 
   function renderClients() {
@@ -906,7 +882,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     const booking = id ? L.getBookings().find(item => String(item.id) === String(id)) : null;
     $("#bookingModalTitle").textContent = booking ? "Editar agendamento" : "Novo agendamento";
     $("#editorBookingId").value = booking?.id || ""; fillBookingServiceOptions(booking?.serviceId || "");
-    $("#editorName").value = booking?.name || ""; $("#editorPhone").value = booking?.phone || ""; $("#editorStatus").value = booking?.status || "pending"; $("#editorDate").value = booking?.date || L.toLocalISO(calendarDate); $("#editorProfessional").value = booking?.professional || L.getSettings().professional; $("#editorNotes").value = booking?.notes || "";
+    $("#editorName").value = booking?.name || ""; $("#editorPhone").value = booking?.phone || ""; $("#editorStatus").value = booking?.status || "confirmed"; $("#editorDate").value = booking?.date || L.toLocalISO(calendarDate); $("#editorProfessional").value = booking?.professional || L.getSettings().professional; $("#editorNotes").value = booking?.notes || "";
     updateEditorTimes(); if (booking) $("#editorTime").value = booking.startTime; updateEditorSummary();
     bookingModal.classList.add("open"); bookingModal.setAttribute("aria-hidden", "false");
   }
@@ -924,22 +900,10 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     if (!service || !date || !time || $("#editorName").value.trim().length < 2 || L.normalizePhone($("#editorPhone").value).length < 10) return showToast("Preencha os dados do agendamento corretamente.", true);
     const professional = $("#editorProfessional").value.trim() || L.getSettings().professional;
     const inactiveStatus = ["cancelled", "completed", "no_show"].includes(status);
-    const statusesToCheck = status === "confirmed" ? ["confirmed"] : ["pending", "confirmed"];
+    const statusesToCheck = ["pending", "confirmed"];
     if (!inactiveStatus && !L.isSlotAvailable({ date, startTime: time, durationMinutes: service.durationMinutes, professional, ignoreBookingId: id || null, allowPast: false, bookingStatuses: statusesToCheck })) return showToast("Este horário entra em conflito com outro agendamento confirmado ou com um bloqueio.", true);
 
-    const pendingConflicts = status === "confirmed" ? L.findBookingConflicts({ date, startTime: time, durationMinutes: service.durationMinutes, professional, ignoreBookingId: id || null, statuses: ["pending"] }) : [];
-    if (pendingConflicts.length) {
-      const names = pendingConflicts.map(item => `${item.name} (${item.code})`).join(", ");
-      if (!window.confirm(`Há ${pendingConflicts.length} solicitação pendente concorrente: ${names}.
-
-Salvar este agendamento como confirmado e cancelar as concorrentes?`)) return;
-    }
-
     const saved = L.upsertBooking({ ...existing, id: id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, code: existing?.code || L.makeCode(), serviceId: service.id, service: service.name, durationMinutes: service.durationMinutes, priceValue: service.price, date, dateLabel: L.formatDate(date), startTime: time, time, endTime: L.addMinutes(time, service.durationMinutes), name: $("#editorName").value.trim(), phone: L.formatPhone($("#editorPhone").value), professional, notes: $("#editorNotes").value.trim(), status, source: existing?.source || "admin", createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
-    if (status === "confirmed" && pendingConflicts.length) {
-      const result = L.confirmBooking(saved.id, { cancelPendingConflicts: true });
-      if (!result.ok) return showToast("O agendamento foi salvo, mas a confirmação encontrou um conflito. Revise a agenda.", true);
-    }
     closeBookingEditor(); showToast(existing ? "Agendamento atualizado." : `Agendamento criado. Código ${saved.code}`);
   });
 

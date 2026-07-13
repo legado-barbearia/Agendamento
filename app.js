@@ -553,7 +553,7 @@
       button.classList.toggle("done", index + 1 < state.step);
     });
     elements.prev.disabled = state.step === 1;
-    elements.next.textContent = state.step === 4 ? (state.rebookingId ? "Confirmar reagendamento" : "Confirmar agendamento") : "Continuar";
+    elements.next.textContent = state.step === 4 ? (state.rebookingId ? "Finalizar reagendamento" : "Finalizar agendamento") : "Continuar";
   }
 
   async function createBooking() {
@@ -581,7 +581,7 @@
       clientPhoto: $("#clientPhotoData")?.value || "",
       professional: elements.professional.value || settings.professional,
       notes: $("#notes").value.trim(),
-      status: "pending",
+      status: "confirmed",
       createdAt: now,
       updatedAt: now,
       rescheduledFrom: state.rebookingId,
@@ -616,7 +616,7 @@
       <strong>Data:</strong> ${L.escapeHTML(L.formatDate(booking.date))}<br>
       <strong>Horário:</strong> ${booking.startTime} às ${booking.endTime}<br>
       <strong>Profissional:</strong> ${L.escapeHTML(booking.professional)}<br>
-      <strong>Status:</strong> Pendente — aguardando confirmação da barbearia
+      <strong>Status:</strong> Agendado — horário reservado para você
       ${booking.notes ? `<br><strong>Observação:</strong> ${L.escapeHTML(booking.notes)}` : ""}`;
     const depositBox = $("#depositBox");
     const showDeposit = settings.depositEnabled && Number(settings.depositAmount) > 0 && String(settings.pixKey || "").trim();
@@ -626,7 +626,7 @@
     elements.modal.setAttribute("aria-hidden", "false");
   }
 
-  function whatsappMessage(booking, intro = "Olá! Gostaria de confirmar meu agendamento na Legado Barbearia.") {
+  function whatsappMessage(booking, intro = "Olá! Acabei de agendar meu horário na Legado Barbearia.") {
     return [
       intro, "", `*Código:* ${booking.code}`, `*Nome:* ${booking.name}`, `*Serviço:* ${booking.service}${booking.priceValue > 0 ? ` · ${L.formatCurrency(booking.priceValue)}` : ""}`,
       `*Data:* ${L.formatDate(booking.date)}`, `*Horário:* ${booking.startTime} às ${booking.endTime}`, `*Profissional:* ${booking.professional}`,

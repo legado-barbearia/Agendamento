@@ -167,6 +167,7 @@ drop policy if exists "admins manage portfolio" on public.portfolio;
 drop policy if exists "admins manage testimonials" on public.testimonials;
 drop policy if exists "users read own profile" on public.profiles;
 drop policy if exists "public create pending booking" on public.bookings;
+drop policy if exists "public create confirmed booking" on public.bookings;
 drop policy if exists "public create client profile" on public.clients;
 drop policy if exists "public read client profile" on public.clients;
 drop policy if exists "public update client profile" on public.clients;
@@ -190,11 +191,11 @@ create policy "admins manage portfolio" on public.portfolio for all to authentic
 create policy "admins manage testimonials" on public.testimonials for all to authenticated using (true) with check (true);
 create policy "users read own profile" on public.profiles for select to authenticated using (auth.uid() = id);
 
--- Criação pública de agendamentos pendentes. Em produção, prefira uma Edge Function
+-- Criação pública de agendamentos já confirmados. Em produção, prefira uma Edge Function
 -- ou RPC com validação de conflito, limite de requisições e CAPTCHA.
-create policy "public create pending booking" on public.bookings
+create policy "public create confirmed booking" on public.bookings
 for insert to anon
-with check (status = 'pending' and char_length(phone_digits) between 10 and 13);
+with check (status = 'confirmed' and char_length(phone_digits) between 10 and 13);
 
 create policy "public create client profile" on public.clients
 for insert to anon
