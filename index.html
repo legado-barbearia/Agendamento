@@ -237,9 +237,9 @@
           <label><span>Nome completo</span><input id="profileName" type="text" autocomplete="name" placeholder="Seu nome" required /></label>
           <label><span>WhatsApp</span><input id="profilePhone" type="tel" autocomplete="tel" placeholder="(64) 99999-9999" required /></label>
           <label><span>Você já é cliente da Legado?</span><select id="profileExistingCustomer"><option value="">Selecione</option><option value="yes">Sim, já sou cliente</option><option value="no">Ainda não, será minha primeira vez</option></select></label>
-          <label class="client-photo-field"><span>Foto de perfil <small>(opcional)</small></span><input id="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+          <label class="client-photo-field profile-upload-field"><span>Foto de perfil <small>(opcional)</small></span><input id="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" /><strong><span>Escolher foto</span><small id="profilePhotoLabel">Nenhuma foto escolhida</small></strong></label>
           <label><span>Preferências <small>(opcional)</small></span><textarea id="profileNotes" rows="3" placeholder="Ex.: degradê baixo, barba mais alinhada..."></textarea></label>
-          <button class="button" type="submit">Criar meu perfil</button>
+          <button class="button" id="profileSubmitButton" type="submit">Criar meu perfil</button>
           <small>Na próxima vez, digite seu WhatsApp e a Legado reconhece você automaticamente.</small>
         </form>
         <form class="lookup-card" id="lookupForm">

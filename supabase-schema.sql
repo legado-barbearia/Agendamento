@@ -185,6 +185,59 @@ for update to anon
 using (char_length(phone_digits) between 10 and 13)
 with check (char_length(phone_digits) between 10 and 13);
 
+-- Necessario para o site localizar o perfil existente pelo WhatsApp normalizado
+-- antes de atualizar, evitando duplicar clientes anonimos.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'clients' and policyname = 'public read client profile'
+  ) then
+    create policy "public read client profile" on public.clients
+    for select to anon
+    using (char_length(phone_digits) between 10 and 13);
+  end if;
+end $$;
+
+-- Bucket publico usado para fotos de perfil dos clientes.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('client-photos', 'client-photos', true, 5242880, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects' and policyname = 'public read client photos'
+  ) then
+    create policy "public read client photos" on storage.objects
+    for select to anon, authenticated
+    using (bucket_id = 'client-photos');
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects' and policyname = 'public upload client photos'
+  ) then
+    create policy "public upload client photos" on storage.objects
+    for insert to anon
+    with check (bucket_id = 'client-photos');
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects' and policyname = 'public update client photos'
+  ) then
+    create policy "public update client photos" on storage.objects
+    for update to anon
+    using (bucket_id = 'client-photos')
+    with check (bucket_id = 'client-photos');
+  end if;
+end $$;
+
 create policy "public create pending testimonial" on public.testimonials
 for insert to anon
 with check (status = 'pending' and active = false and char_length(phone_digits) between 10 and 13);

@@ -406,6 +406,7 @@
     const clients = getStoredClients();
     const index = clients.findIndex(item => item.phoneDigits === normalized.phoneDigits);
     const now = new Date().toISOString();
+    let savedClient;
     if (index >= 0) {
       clients[index] = normalizeClient({
         ...clients[index],
@@ -416,11 +417,17 @@
         lastSeenAt: now,
         updatedAt: now
       });
+      savedClient = clients[index];
     } else {
-      clients.push(normalizeClient({ ...normalized, firstSeenAt: now, lastSeenAt: now, createdAt: now, updatedAt: now }));
+      savedClient = normalizeClient({ ...normalized, firstSeenAt: now, lastSeenAt: now, createdAt: now, updatedAt: now });
+      clients.push(savedClient);
     }
     setClients(clients);
-    return normalized;
+    return savedClient;
+  }
+
+  async function saveClientProfile(client) {
+    return upsertClient(client);
   }
 
   function getClients() {
@@ -558,7 +565,7 @@
 
   function normalizePhone(value) {
     let digits = String(value || "").replace(/\D/g, "");
-    if (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
+    while (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
     return digits;
   }
 
@@ -923,6 +930,7 @@
     getClients,
     setClients,
     upsertClient,
+    saveClientProfile,
     getAvailability,
     setAvailability,
     timeToMinutes,

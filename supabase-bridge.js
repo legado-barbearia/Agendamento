@@ -5,8 +5,10 @@
   const L = window.Legado;
   if (!config?.url || !config?.anonKey || !L) return;
 
-  const apiBase = config.url.replace(/\/$/, "") + "/rest/v1";
-  const authBase = config.url.replace(/\/$/, "") + "/auth/v1";
+  const projectBase = config.url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+  const apiBase = projectBase + "/rest/v1";
+  const authBase = projectBase + "/auth/v1";
+  const storageBase = projectBase + "/storage/v1";
   const SESSION_KEY = "legadoSupabaseSession";
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let syncingFromSupabase = false;
@@ -20,6 +22,7 @@
     setTestimonials: L.setTestimonials,
     setClients: L.setClients,
     upsertClient: L.upsertClient,
+    saveClientProfile: L.saveClientProfile,
     setBookings: L.setBookings,
     upsertBooking: L.upsertBooking,
     deleteBooking: L.deleteBooking,
@@ -86,6 +89,53 @@
     }
     if (response.status === 204) return null;
     return response.json();
+  }
+
+  async function storageRequest(path, options = {}) {
+    const response = await fetch(`${storageBase}/${path}`, {
+      ...options,
+      headers: headers({ "Content-Type": options.body?.type || "application/octet-stream", ...(options.headers || {}) })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Supabase Storage ${response.status}: ${detail || path}`);
+    }
+    if (response.status === 204) return null;
+    return response.json().catch(() => null);
+  }
+
+  function isImageDataUrl(value) {
+    return /^data:image\/(png|jpe?g|webp);base64,/i.test(String(value || ""));
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const [meta, base64] = String(dataUrl || "").split(",");
+    const contentType = meta.match(/^data:([^;]+)/i)?.[1] || "image/jpeg";
+    const binary = atob(base64 || "");
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new Blob([bytes], { type: contentType });
+  }
+
+  async function uploadClientPhoto(client) {
+    if (!isImageDataUrl(client.photo)) return client.photo || "";
+    const blob = dataUrlToBlob(client.photo);
+    const extension = blob.type.includes("png") ? "png" : blob.type.includes("webp") ? "webp" : "jpg";
+    const phoneDigits = L.normalizePhone(client.phoneDigits || client.phone);
+    const path = `${encodeURIComponent(phoneDigits || stableUuid(client.id))}/profile.${extension}`;
+    await storageRequest(`object/client-photos/${path}`, {
+      method: "POST",
+      headers: { "x-upsert": "true" },
+      body: blob
+    });
+    return `${storageBase}/object/public/client-photos/${path}`;
+  }
+
+  async function findClientRowByPhone(phoneDigits) {
+    const digits = L.normalizePhone(phoneDigits);
+    if (!digits) return null;
+    const rows = await request(`clients?select=*&phone_digits=eq.${encodeURIComponent(digits)}&limit=1`);
+    return rows?.[0] || null;
   }
 
   async function upsert(table, rows, uuidId = false) {
@@ -301,6 +351,24 @@
     const saved = original.upsertClient(client);
     syncQuietly(() => upsert("clients", clientRow(saved), true));
     return saved;
+  };
+
+  L.saveClientProfile = async function saveClientProfile(client) {
+    const normalized = L.normalizeClient(client);
+    if (!normalized.phoneDigits || normalized.phoneDigits.length < 10) throw new Error("WhatsApp invalido para salvar o perfil.");
+    const existing = await findClientRowByPhone(normalized.phoneDigits);
+    const photo = await uploadClientPhoto(normalized);
+    const localClient = original.upsertClient({
+      ...normalized,
+      id: existing?.id || normalized.id,
+      photo: photo || existing?.profile_photo || normalized.photo
+    });
+    const row = clientRow({ ...localClient, id: existing?.id || localClient.id, photo: localClient.photo });
+    const savedRows = await upsert("clients", row, true);
+    const savedClient = mapClient(savedRows?.[0] || row, 0);
+    original.upsertClient(savedClient);
+    window.dispatchEvent(new CustomEvent("legado:datachange", { detail: { key: L.KEYS.clients, source: "profile" } }));
+    return savedClient;
   };
 
   L.setBookings = function setBookings(bookings) {
