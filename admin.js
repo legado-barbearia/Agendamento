@@ -958,7 +958,7 @@
     if (!list) return;
     const settings = L.getSettings();
     const names = currentBarberNamesFromForm();
-    list.innerHTML = names.map(name => {
+    list.innerHTML = names.length ? names.map(name => {
       const photo = settings.barberPhotos?.[name] || "";
       const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
       return `
@@ -968,7 +968,7 @@
           <label class="icon-action file-button">Trocar foto<input type="file" accept="image/jpeg,image/png,image/webp" data-barber-photo-file /></label>
           <button class="icon-action danger" type="button" data-remove-barber-photo>Remover</button>
         </article>`;
-    }).join("");
+    }).join("") : '<div class="empty-admin"><strong>Nenhum barbeiro cadastrado</strong>Informe o profissional principal ou a lista de barbeiros para editar as fotos.</div>';
   }
 
   function barberPhotosForNames(names) {
@@ -987,6 +987,8 @@
 
   function loadSettingsForms() {
     const settings = L.getSettings();
+    const storyPhotoLabel = $("#settingProfessionalPhoto")?.closest(".profile-photo-editor")?.previousElementSibling?.querySelector("span");
+    if (storyPhotoLabel) storyPhotoLabel.textContent = "Foto da História";
     $("#settingProfessional").value = settings.professional; if ($("#settingBarbers")) $("#settingBarbers").value = settings.barbers.join("\n"); refreshBarberOptions(); $("#settingWhatsappNumber").value = settings.whatsappNumber; $("#settingDisplayPhone").value = settings.displayPhone; $("#settingInstagram").value = settings.instagram; $("#settingInstagramUrl").value = settings.instagramUrl; $("#settingCity").value = settings.city; $("#settingAddress").value = settings.address; $("#settingBusinessDays").value = settings.businessDays; $("#settingBusinessHours").value = settings.businessHours; $("#settingBookingMessage").value = settings.bookingMessage; $("#settingCancellationPolicy").value = settings.cancellationPolicy; $("#settingGoogleMapsUrl").value = settings.googleMapsUrl || ""; $("#settingAboutTitle").value = settings.aboutTitle || ""; $("#settingAboutText").value = settings.aboutText || ""; $("#settingProfessionalBio").value = settings.professionalBio || ""; $("#settingPortfolioTitle").value = settings.portfolioTitle || ""; $("#settingPortfolioText").value = settings.portfolioText || ""; $("#settingTestimonialsTitle").value = settings.testimonialsTitle || ""; $("#settingTestimonialsText").value = settings.testimonialsText || ""; $("#settingProfessionalPhoto").value = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingProfessionalPhotoPreview").src = settings.professionalPhoto || "assets/gilliel-apresentacao.webp"; $("#settingDepositEnabled").checked = Boolean(settings.depositEnabled); $("#settingDepositAmount").value = Number(settings.depositAmount) || 0; $("#settingPixKey").value = settings.pixKey || ""; $("#settingDepositMessage").value = settings.depositMessage || ""; $("#settingLoyaltyEnabled").checked = Boolean(settings.loyaltyEnabled); $("#settingLoyaltyGoal").value = Number(settings.loyaltyGoal) || 10; $("#settingLoyaltyReward").value = settings.loyaltyReward || ""; $("#settingShowPrices").checked = settings.showPrices; renderBarberPhotoEditor();
     const credentials = getCredentials(); $("#credentialName").value = credentials?.name || ""; $("#credentialEmail").value = credentials?.email || ""; $("#credentialPassword").value = ""; $("#credentialPasswordConfirm").value = "";
   }
@@ -996,8 +998,41 @@
     catch (error) { showToast(error.message, true); event.target.value = ""; }
   });
   $("#removeProfessionalPhoto").addEventListener("click", () => { $("#settingProfessionalPhoto").value = "assets/logo.png"; $("#settingProfessionalPhotoPreview").src = "assets/logo.png"; $("#settingProfessionalPhotoFile").value = ""; });
+  [$("#settingProfessional"), $("#settingBarbers")].filter(Boolean).forEach(input => input.addEventListener("input", renderBarberPhotoEditor));
+  document.addEventListener("click", event => {
+    if (event.target.closest("#refreshBarberPhotos")) return renderBarberPhotoEditor();
+    const removeButton = event.target.closest("[data-remove-barber-photo]");
+    if (!removeButton) return;
+    const name = removeButton.closest("[data-barber-photo-name]")?.dataset.barberPhotoName;
+    if (!name) return;
+    const settings = L.getSettings();
+    const barberPhotos = { ...(settings.barberPhotos || {}) };
+    delete barberPhotos[name];
+    L.setSettings({ barberPhotos });
+    renderBarberPhotoEditor();
+    showToast("Foto do barbeiro removida.");
+  });
+  document.addEventListener("change", async event => {
+    const input = event.target.closest("[data-barber-photo-file]");
+    if (!input) return;
+    const name = input.closest("[data-barber-photo-name]")?.dataset.barberPhotoName;
+    const file = input.files?.[0];
+    if (!name || !file) return;
+    try {
+      showToast("Otimizando foto do barbeiro...");
+      const data = await optimizeImage(file, 900, .82);
+      const settings = L.getSettings();
+      L.setSettings({ barberPhotos: { ...(settings.barberPhotos || {}), [name]: data } });
+      input.value = "";
+      renderBarberPhotoEditor();
+      showToast("Foto do barbeiro salva.");
+    } catch (error) {
+      showToast(error.message, true);
+      input.value = "";
+    }
+  });
   $("#businessSettingsForm").addEventListener("submit", event => {
-    event.preventDefault(); const primaryProfessional = $("#settingProfessional").value.trim(); L.setSettings({ professional: primaryProfessional, barbers: parseBarbers($("#settingBarbers")?.value, primaryProfessional), whatsappNumber: $("#settingWhatsappNumber").value.replace(/\D/g, ""), displayPhone: $("#settingDisplayPhone").value.trim(), instagram: $("#settingInstagram").value.trim(), instagramUrl: $("#settingInstagramUrl").value.trim(), city: $("#settingCity").value.trim(), address: $("#settingAddress").value.trim(), businessDays: $("#settingBusinessDays").value.trim(), businessHours: $("#settingBusinessHours").value.trim(), bookingMessage: $("#settingBookingMessage").value.trim(), cancellationPolicy: $("#settingCancellationPolicy").value.trim(), googleMapsUrl: $("#settingGoogleMapsUrl").value.trim(), aboutTitle: $("#settingAboutTitle").value.trim(), aboutText: $("#settingAboutText").value.trim(), professionalBio: $("#settingProfessionalBio").value.trim(), portfolioTitle: $("#settingPortfolioTitle").value.trim(), portfolioText: $("#settingPortfolioText").value.trim(), testimonialsTitle: $("#settingTestimonialsTitle").value.trim(), testimonialsText: $("#settingTestimonialsText").value.trim(), professionalPhoto: $("#settingProfessionalPhoto").value || "assets/gilliel-apresentacao.webp", depositEnabled: $("#settingDepositEnabled").checked, depositAmount: Number($("#settingDepositAmount").value) || 0, pixKey: $("#settingPixKey").value.trim(), depositMessage: $("#settingDepositMessage").value.trim(), loyaltyEnabled: $("#settingLoyaltyEnabled").checked, loyaltyGoal: Math.max(1, Number($("#settingLoyaltyGoal").value) || 10), loyaltyReward: $("#settingLoyaltyReward").value.trim(), showPrices: $("#settingShowPrices").checked }); showToast("Informações públicas atualizadas.");
+    event.preventDefault(); const primaryProfessional = $("#settingProfessional").value.trim(); const barbers = parseBarbers($("#settingBarbers")?.value, primaryProfessional); L.setSettings({ professional: primaryProfessional, barbers, barberPhotos: barberPhotosForNames(barbers), whatsappNumber: $("#settingWhatsappNumber").value.replace(/\D/g, ""), displayPhone: $("#settingDisplayPhone").value.trim(), instagram: $("#settingInstagram").value.trim(), instagramUrl: $("#settingInstagramUrl").value.trim(), city: $("#settingCity").value.trim(), address: $("#settingAddress").value.trim(), businessDays: $("#settingBusinessDays").value.trim(), businessHours: $("#settingBusinessHours").value.trim(), bookingMessage: $("#settingBookingMessage").value.trim(), cancellationPolicy: $("#settingCancellationPolicy").value.trim(), googleMapsUrl: $("#settingGoogleMapsUrl").value.trim(), aboutTitle: $("#settingAboutTitle").value.trim(), aboutText: $("#settingAboutText").value.trim(), professionalBio: $("#settingProfessionalBio").value.trim(), portfolioTitle: $("#settingPortfolioTitle").value.trim(), portfolioText: $("#settingPortfolioText").value.trim(), testimonialsTitle: $("#settingTestimonialsTitle").value.trim(), testimonialsText: $("#settingTestimonialsText").value.trim(), professionalPhoto: $("#settingProfessionalPhoto").value || "assets/gilliel-apresentacao.webp", depositEnabled: $("#settingDepositEnabled").checked, depositAmount: Number($("#settingDepositAmount").value) || 0, pixKey: $("#settingPixKey").value.trim(), depositMessage: $("#settingDepositMessage").value.trim(), loyaltyEnabled: $("#settingLoyaltyEnabled").checked, loyaltyGoal: Math.max(1, Number($("#settingLoyaltyGoal").value) || 10), loyaltyReward: $("#settingLoyaltyReward").value.trim(), showPrices: $("#settingShowPrices").checked }); renderBarberPhotoEditor(); showToast("Informações públicas atualizadas.");
   });
   $("#credentialsForm").addEventListener("submit", async event => {
     event.preventDefault(); const current = getCredentials(); const name = $("#credentialName").value.trim(); const email = $("#credentialEmail").value.trim().toLowerCase(); const password = $("#credentialPassword").value; const confirmation = $("#credentialPasswordConfirm").value;
