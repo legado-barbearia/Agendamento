@@ -250,7 +250,7 @@
     grid.innerHTML = visible.map(item => {
       const galleryCount = Array.isArray(item.images) ? item.images.length : 1;
       return `
-      <article class="portfolio-card reveal ${item.featured ? "featured" : ""}" data-portfolio-id="${L.escapeHTML(item.id)}" tabindex="0" role="button" aria-label="Abrir ${L.escapeHTML(item.title)}">
+      <article class="portfolio-card reveal ${item.featured ? "featured" : ""}" data-portfolio-id="${L.escapeHTML(item.id)}" tabindex="0" role="button" aria-label="Abrir ${L.escapeHTML(item.title)}" style="--portfolio-focus-x:${Number(item.imagePositionX || 50)}%;--portfolio-focus-y:${Number(item.imagePositionY || 50)}%;--portfolio-zoom:${Number(item.imageZoom || 1)};">
         <img src="${L.escapeHTML(item.image)}" alt="${L.escapeHTML(item.alt)}" loading="lazy" />
         ${galleryCount > 1 ? `<span class="portfolio-gallery-badge">${galleryCount} fotos</span>` : ""}
         <span class="portfolio-open" aria-hidden="true">↗</span>
@@ -956,10 +956,9 @@
     const name = $("#profileName").value.trim();
     const phone = L.formatPhone($("#profilePhone").value);
     const phoneDigits = L.normalizePhone(phone);
-    const existingCustomer = $("#profileExistingCustomer").value;
+    const existingCustomer = $("#profileExistingCustomer").value || "no";
     if (name.length < 2) return showToast("Informe seu nome para criar seu perfil.", true);
     if (phoneDigits.length < 10) return showToast("Informe um WhatsApp válido.", true);
-    if (!existingCustomer) return showToast("Informe se você já é cliente da Legado.", true);
     try {
       if (submitButton) {
         submitButton.disabled = true;
@@ -975,7 +974,12 @@
       return;
     } catch (error) {
       console.error("Erro ao salvar perfil Legado:", error);
-      showToast(error.message || "Nao foi possivel salvar seu perfil agora.", true);
+      const client = L.upsertClient({ name, phone, phoneDigits, photo: $("#profilePhotoData").value || "", existingCustomer: existingCustomer === "yes", notes: $("#profileNotes").value.trim() });
+      applyClientProfile(client, "all");
+      renderClientProfileCard(client);
+      renderWelcomeExperience();
+      closeFirstAccess();
+      showToast("Perfil salvo neste aparelho. Depois tento sincronizar com o Supabase.");
       return;
     } finally {
       if (submitButton) {

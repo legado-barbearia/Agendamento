@@ -467,6 +467,31 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     return [...new Set((Array.isArray(list) ? list : []).map(value => String(value || "").trim()).filter(Boolean))];
   }
 
+  function currentPortfolioPhotoAdjust() {
+    return {
+      imagePositionX: Math.max(0, Math.min(100, Number($("#portfolioImagePositionX")?.value || 50))),
+      imagePositionY: Math.max(0, Math.min(100, Number($("#portfolioImagePositionY")?.value || 50))),
+      imageZoom: Math.max(1, Math.min(1.35, Number($("#portfolioImageZoom")?.value || 1)))
+    };
+  }
+
+  function applyPortfolioPhotoAdjust(values = {}) {
+    const x = Math.max(0, Math.min(100, Number(values.imagePositionX ?? values.x ?? 50)));
+    const y = Math.max(0, Math.min(100, Number(values.imagePositionY ?? values.y ?? 50)));
+    const zoom = Math.max(1, Math.min(1.35, Number(values.imageZoom ?? values.zoom ?? 1)));
+    if ($("#portfolioImagePositionX")) $("#portfolioImagePositionX").value = String(x);
+    if ($("#portfolioImagePositionY")) $("#portfolioImagePositionY").value = String(y);
+    if ($("#portfolioImageZoom")) $("#portfolioImageZoom").value = String(zoom);
+    if ($("#portfolioFocusX")) $("#portfolioFocusX").value = String(x);
+    if ($("#portfolioFocusY")) $("#portfolioFocusY").value = String(y);
+    if ($("#portfolioZoom")) $("#portfolioZoom").value = String(zoom);
+    const previewImage = $("#portfolioImagePreview img");
+    if (previewImage) {
+      previewImage.style.objectPosition = `${x}% ${y}%`;
+      previewImage.style.transform = `scale(${zoom})`;
+    }
+  }
+
   function renderPortfolioGalleryEditor() {
     const container = $("#portfolioGalleryEditor");
     if (!container) return;
@@ -525,6 +550,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     $("#portfolioId").value = "";
     $("#portfolioImageData").value = "assets/corte.webp";
     $("#portfolioImagePreview img").src = "assets/corte.webp";
+    applyPortfolioPhotoAdjust();
     currentPortfolioGallery = ["assets/corte.webp"];
     $("#portfolioSummaryInput").value = "";
     $("#portfolioDescriptionInput").value = "";
@@ -543,7 +569,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     $("#portfolioCount").textContent = items.length;
     $("#portfolioAdminList").innerHTML = items.length ? items.map(item => `
       <article class="portfolio-admin-item ${item.active ? "" : "inactive"}" data-portfolio-admin-id="${L.escapeHTML(item.id)}">
-        <img src="${L.escapeHTML(item.image)}" alt="" />
+        <img src="${L.escapeHTML(item.image)}" alt="" style="object-position:${Number(item.imagePositionX || 50)}% ${Number(item.imagePositionY || 50)}%;" />
         <div><h4>${L.escapeHTML(item.title)}</h4><p><strong>Legenda:</strong> ${L.escapeHTML(item.summary || item.description)}</p><p class="portfolio-admin-description"><strong>Texto completo:</strong> ${L.escapeHTML(item.description)}</p><div class="item-meta">${L.escapeHTML(item.category)} · ordem ${item.order} · <strong>${(Array.isArray(item.images) ? item.images.length : 1)} foto(s)</strong> · ${item.featured ? "destaque · " : ""}${item.active ? "publicado" : "oculto"}</div></div>
         <div class="management-actions"><button class="icon-action" data-portfolio-action="edit" type="button">Editar</button><button class="icon-action" data-portfolio-action="up" type="button">↑</button><button class="icon-action" data-portfolio-action="down" type="button">↓</button><button class="icon-action" data-portfolio-action="toggle" type="button">${item.active ? "Ocultar" : "Publicar"}</button><button class="icon-action danger" data-portfolio-action="delete" type="button">Excluir</button></div>
       </article>`).join("") : '<div class="empty-admin"><strong>Portfólio vazio</strong>Adicione fotos dos trabalhos e do ambiente.</div>';
@@ -557,11 +583,21 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
       const data = await optimizeImage(file, 1500, .8);
       const previousCover = $("#portfolioImageData").value;
       $("#portfolioImageData").value = data; $("#portfolioImagePreview img").src = data;
+      applyPortfolioPhotoAdjust();
       currentPortfolioGallery = dedupeImages([data, ...currentPortfolioGallery.filter(image => image !== previousCover)]);
       renderPortfolioGalleryEditor();
       showToast("Imagem pronta para salvar.");
     } catch (error) { showToast(error.message, true); event.target.value = ""; }
   });
+
+  [$("#portfolioFocusX"), $("#portfolioFocusY"), $("#portfolioZoom")].filter(Boolean).forEach(input => input.addEventListener("input", () => {
+    applyPortfolioPhotoAdjust({
+      imagePositionX: $("#portfolioFocusX").value,
+      imagePositionY: $("#portfolioFocusY").value,
+      imageZoom: $("#portfolioZoom").value
+    });
+  }));
+  $("#resetPortfolioPhotoAdjust")?.addEventListener("click", () => applyPortfolioPhotoAdjust());
 
   const portfolioGalleryInput = $("#portfolioGalleryImages");
   if (portfolioGalleryInput) portfolioGalleryInput.addEventListener("change", event => {
@@ -579,6 +615,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     if (action === "cover") {
       $("#portfolioImageData").value = image;
       $("#portfolioImagePreview img").src = image;
+      applyPortfolioPhotoAdjust();
       currentPortfolioGallery = dedupeImages([image, ...currentPortfolioGallery.filter(current => current !== image)]);
       renderPortfolioGalleryEditor();
       return;
@@ -590,6 +627,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
       if (!currentPortfolioGallery.includes($("#portfolioImageData").value)) {
         $("#portfolioImageData").value = currentPortfolioGallery[0];
         $("#portfolioImagePreview img").src = currentPortfolioGallery[0];
+        applyPortfolioPhotoAdjust();
       }
       renderPortfolioGalleryEditor();
     }
@@ -609,7 +647,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     const item = L.normalizePortfolioItem({
       ...existing, id, title, category: $("#portfolioCategoryInput").value.trim() || "Cortes",
       summary: $("#portfolioSummaryInput").value.trim(), description: $("#portfolioDescriptionInput").value.trim(), alt: $("#portfolioAltInput").value.trim() || title,
-      image: cover, images: galleryImages,
+      image: cover, images: galleryImages, ...currentPortfolioPhotoAdjust(),
       featured: $("#portfolioFeaturedInput").checked, active: $("#portfolioActiveInput").checked,
       order: Number($("#portfolioOrderInput").value) || items.length + 1
     });
@@ -626,7 +664,7 @@ Confirmar ${booking.name} e cancelar automaticamente as solicitações concorren
     const items = L.getPortfolio(true); const index = items.findIndex(item => item.id === row.dataset.portfolioAdminId); if (index < 0) return;
     const item = items[index];
     if (action === "edit") {
-      $("#portfolioId").value = item.id; $("#portfolioTitleInput").value = item.title; $("#portfolioCategoryInput").value = item.category; $("#portfolioSummaryInput").value = item.summary || item.description; $("#portfolioDescriptionInput").value = item.description; $("#portfolioAltInput").value = item.alt; $("#portfolioImageData").value = item.image; $("#portfolioImagePreview img").src = item.image; $("#portfolioFeaturedInput").checked = item.featured; $("#portfolioActiveInput").checked = item.active; $("#portfolioOrderInput").value = item.order; currentPortfolioGallery = dedupeImages(item.images && item.images.length ? item.images : [item.image]); renderPortfolioGalleryEditor(); $("#portfolioFormTitle").textContent = "Editar trabalho"; $("#portfolioForm").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("#portfolioId").value = item.id; $("#portfolioTitleInput").value = item.title; $("#portfolioCategoryInput").value = item.category; $("#portfolioSummaryInput").value = item.summary || item.description; $("#portfolioDescriptionInput").value = item.description; $("#portfolioAltInput").value = item.alt; $("#portfolioImageData").value = item.image; $("#portfolioImagePreview img").src = item.image; applyPortfolioPhotoAdjust(item); $("#portfolioFeaturedInput").checked = item.featured; $("#portfolioActiveInput").checked = item.active; $("#portfolioOrderInput").value = item.order; currentPortfolioGallery = dedupeImages(item.images && item.images.length ? item.images : [item.image]); renderPortfolioGalleryEditor(); $("#portfolioFormTitle").textContent = "Editar trabalho"; $("#portfolioForm").scrollIntoView({ behavior: "smooth", block: "start" });
     }
     if (action === "toggle") { item.active = !item.active; L.setPortfolio(items); showToast(item.active ? "Trabalho publicado." : "Trabalho ocultado."); }
     if (["up", "down"].includes(action)) {

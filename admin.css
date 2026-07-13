@@ -218,6 +218,73 @@
 }
 
 /* V27 - Admin organizado: painel mais claro, previsivel e profissional */
+
+/* V42 - Ajuste visual de fotos dentro do painel */
+.media-upload-preview img{
+  transform-origin:center;
+  transition:transform .18s ease,object-position .18s ease;
+}
+.photo-adjust-panel{
+  border:1px solid rgba(239,215,126,.22);
+  border-radius:14px;
+  padding:13px;
+  display:grid;
+  gap:11px;
+  background:linear-gradient(145deg,rgba(215,180,74,.06),rgba(3,14,24,.38));
+}
+.photo-adjust-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.photo-adjust-heading strong{
+  font-family:var(--serif);
+  color:var(--gold-light);
+  font-size:16px;
+}
+.photo-adjust-heading small{
+  color:var(--muted);
+  font-size:7px;
+  line-height:1.5;
+  text-align:right;
+}
+.photo-adjust-panel label{
+  display:grid;
+  grid-template-columns:78px minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+}
+.photo-adjust-panel label span{
+  color:#cdd7dd;
+  font-size:8px;
+}
+.photo-adjust-panel input[type="range"]{
+  width:100%;
+  accent-color:var(--gold);
+}
+.photo-adjust-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+.portfolio-admin-item>img{
+  transform-origin:center;
+}
+@media(max-width:560px){
+  .photo-adjust-heading{
+    display:grid;
+  }
+  .photo-adjust-heading small{
+    text-align:left;
+  }
+  .photo-adjust-panel label{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+  .photo-adjust-actions .icon-action{
+    width:100%;
+  }
+}
 :root{
   --admin-max:1560px;
   --admin-panel:rgba(7,25,40,.78);

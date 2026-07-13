@@ -1927,3 +1927,13 @@ body.profile-onboarding-open #profileSubmitButton{
     border-radius:17px!important;
   }
 }
+
+/* V42 - Enquadramento ajustavel das fotos do portfolio */
+.portfolio-card img{
+  object-position:var(--portfolio-focus-x,50%) var(--portfolio-focus-y,50%)!important;
+  transform:scale(var(--portfolio-zoom,1))!important;
+  transform-origin:center!important;
+}
+.portfolio-card:hover img{
+  transform:scale(calc(var(--portfolio-zoom,1) + .045))!important;
+}

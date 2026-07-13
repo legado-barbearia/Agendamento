@@ -393,10 +393,11 @@
   L.saveClientProfile = async function saveClientProfile(client) {
     const normalized = L.normalizeClient(client);
     if (!normalized.phoneDigits || normalized.phoneDigits.length < 10) throw new Error("WhatsApp invalido para salvar o perfil.");
+    const localDraft = original.upsertClient(normalized);
     const existing = await findClientRowByPhone(normalized.phoneDigits);
     const photo = await uploadClientPhoto(normalized);
     const localClient = original.upsertClient({
-      ...normalized,
+      ...localDraft,
       id: existing?.id || normalized.id,
       photo: photo || existing?.profile_photo || normalized.photo
     });

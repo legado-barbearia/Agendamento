@@ -171,6 +171,9 @@
                 <div class="card-heading"><div><span class="eyebrow">NOVO TRABALHO</span><h3 id="portfolioFormTitle">Adicionar trabalho</h3><p>Primeiro escreva as informações; depois escolha as fotos.</p></div></div>
                 <input id="portfolioId" type="hidden" />
                 <input id="portfolioImageData" type="hidden" />
+                <input id="portfolioImagePositionX" type="hidden" value="50" />
+                <input id="portfolioImagePositionY" type="hidden" value="50" />
+                <input id="portfolioImageZoom" type="hidden" value="1" />
 
                 <div class="portfolio-form-block portfolio-text-block">
                   <div class="portfolio-block-heading"><span>01</span><div><strong>Textos do trabalho</strong><small>O título e a legenda aparecem no card. O texto completo aparece quando a pessoa abre.</small></div></div>
@@ -187,6 +190,13 @@
                 <div class="portfolio-form-block portfolio-media-block">
                   <div class="portfolio-block-heading"><span>02</span><div><strong>Fotos do trabalho</strong><small>Escolha uma capa e acrescente quantas fotos precisar.</small></div></div>
                   <div class="media-upload-preview" id="portfolioImagePreview"><img src="assets/corte.webp" alt="Prévia da imagem" /></div>
+                  <div class="photo-adjust-panel">
+                    <div class="photo-adjust-heading"><strong>Enquadramento da capa</strong><small>Ajuste como a foto aparece no card do site.</small></div>
+                    <label><span>Horizontal</span><input id="portfolioFocusX" type="range" min="0" max="100" value="50" /></label>
+                    <label><span>Vertical</span><input id="portfolioFocusY" type="range" min="0" max="100" value="50" /></label>
+                    <label><span>Zoom</span><input id="portfolioZoom" type="range" min="1" max="1.35" step="0.01" value="1" /></label>
+                    <div class="photo-adjust-actions"><button class="icon-action" id="resetPortfolioPhotoAdjust" type="button">Centralizar foto</button></div>
+                  </div>
                   <label class="button button-secondary file-button media-file-button">Escolher foto de capa<input id="portfolioImage" type="file" accept="image/jpeg,image/png,image/webp" /></label>
                   <label class="button button-secondary file-button media-file-button">Adicionar mais fotos<input id="portfolioGalleryImages" type="file" accept="image/jpeg,image/png,image/webp" multiple /></label>
                   <small class="upload-hint">A foto de capa aparece na grade. As outras ficam disponíveis quando o cliente abre o trabalho.</small>
