@@ -262,12 +262,20 @@ create policy "public create pending testimonial" on public.testimonials
 for insert to anon
 with check (status = 'pending' and active = false and char_length(phone_digits) between 10 and 13);
 
+grant usage on schema public to anon, authenticated;
+grant select on public.business_settings, public.availability, public.services, public.portfolio, public.testimonials to anon, authenticated;
+grant insert on public.bookings, public.clients, public.testimonials to anon;
+grant select, update on public.clients to anon;
+grant all on public.business_settings, public.availability, public.services, public.blocked_slots, public.bookings, public.clients, public.portfolio, public.testimonials to authenticated;
+
 -- Retorna somente os intervalos ocupados, sem dados pessoais.
+drop function if exists public.booked_intervals(date);
+
 create or replace function public.booked_intervals(p_date date)
-returns table (start_time time, end_time time)
+returns table (start_time time, end_time time, professional text)
 language sql security definer set search_path = public
 as $$
-  select b.start_time, b.end_time
+  select b.start_time, b.end_time, b.professional
   from public.bookings b
   where b.booking_date = p_date and b.status in ('pending','confirmed');
 $$;

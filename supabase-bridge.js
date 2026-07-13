@@ -23,6 +23,9 @@
     setClients: L.setClients,
     upsertClient: L.upsertClient,
     saveClientProfile: L.saveClientProfile,
+    reserveBookingOnline: L.reserveBookingOnline,
+    submitTestimonialOnline: L.submitTestimonialOnline,
+    loadRemoteBookingsForDate: L.loadRemoteBookingsForDate,
     setBookings: L.setBookings,
     upsertBooking: L.upsertBooking,
     deleteBooking: L.deleteBooking,
@@ -138,6 +141,28 @@
     return rows?.[0] || null;
   }
 
+  async function fetchActiveBookingsForDate(date) {
+    const rows = await request("rpc/booked_intervals", {
+      method: "POST",
+      body: JSON.stringify({ p_date: date })
+    });
+    return (rows || []).map((row, index) => L.normalizeBooking({
+      id: `remote-${date}-${cleanTime(row.start_time)}-${index}`,
+      code: "OCUPADO",
+      service: "Horário reservado",
+      durationMinutes: Math.max(5, L.timeToMinutes(cleanTime(row.end_time)) - L.timeToMinutes(cleanTime(row.start_time))),
+      date,
+      startTime: cleanTime(row.start_time),
+      time: cleanTime(row.start_time),
+      endTime: cleanTime(row.end_time),
+      name: "Cliente Legado",
+      phone: "",
+      professional: row.professional || "",
+      status: "confirmed",
+      source: "supabase"
+    }));
+  }
+
   async function upsert(table, rows, uuidId = false) {
     const list = (Array.isArray(rows) ? rows : [rows]).filter(Boolean);
     if (!list.length) return [];
@@ -147,6 +172,18 @@
       headers: { Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify(body)
     });
+  }
+
+  async function upsertMinimal(table, rows, uuidId = false) {
+    const list = (Array.isArray(rows) ? rows : [rows]).filter(Boolean);
+    if (!list.length) return [];
+    const body = list.map(row => uuidId && row.id ? { ...row, id: stableUuid(row.id) } : row);
+    await request(`${table}?on_conflict=id`, {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify(body)
+    });
+    return body;
   }
 
   async function removeRows(table, ids, uuidId = false) {
@@ -391,6 +428,48 @@
     const result = original.reserveBooking(booking);
     if (result.ok) syncQuietly(async () => { await upsert("bookings", bookingRow(result.booking), true); await upsert("clients", clientRow({ name: result.booking.name, phone: result.booking.phone, phoneDigits: result.booking.phoneDigits, photo: result.booking.clientPhoto }), true); });
     return result;
+  };
+
+  L.reserveBookingOnline = async function reserveBookingOnline(booking) {
+    const remoteBookings = await fetchActiveBookingsForDate(booking.date);
+    const merged = new Map(L.getBookings().map(item => [String(item.id), item]));
+    remoteBookings.forEach(item => merged.set(String(item.id), item));
+    original.setBookings([...merged.values()]);
+
+    const result = original.reserveBooking(booking);
+    if (!result.ok) return result;
+
+    try {
+      await Promise.all([
+        upsertMinimal("bookings", bookingRow(result.booking), true),
+        upsert("clients", clientRow({ name: result.booking.name, phone: result.booking.phone, phoneDigits: result.booking.phoneDigits, photo: result.booking.clientPhoto }), true)
+      ]);
+      return { ok: true, booking: result.booking };
+    } catch (error) {
+      original.deleteBooking(result.booking.id);
+      if (String(error.message || "").includes("bookings_no_active_overlap")) {
+        return { ok: false, reason: "conflict", error };
+      }
+      throw error;
+    }
+  };
+
+  L.loadRemoteBookingsForDate = async function loadRemoteBookingsForDate(date) {
+    const remoteBookings = await fetchActiveBookingsForDate(date);
+    const merged = new Map(L.getBookings().map(item => [String(item.id), item]));
+    remoteBookings.forEach(item => merged.set(String(item.id), item));
+    original.setBookings([...merged.values()]);
+    return remoteBookings;
+  };
+
+  L.submitTestimonialOnline = async function submitTestimonialOnline(testimonial) {
+    const normalized = L.normalizeTestimonial(testimonial);
+    await upsertMinimal("testimonials", testimonialRow(normalized), true);
+    const saved = normalized;
+    const current = L.getTestimonials(true).filter(item => String(item.id) !== String(saved.id));
+    original.setTestimonials([...current, saved]);
+    if (saved.phoneDigits) original.upsertClient({ name: saved.name, phone: saved.phone, phoneDigits: saved.phoneDigits, photo: saved.photo });
+    return saved;
   };
 
   L.confirmBooking = function confirmBooking(id, options = {}) {

@@ -33,6 +33,7 @@
   let toastTimer = null;
   let statusInterval = null;
   let testimonialsTimer = null;
+  const remoteBookingsLoadedDates = new Set();
 
   function showToast(message, error = false) {
     clearTimeout(toastTimer);
@@ -420,6 +421,19 @@
       elements.times.innerHTML = '<p class="availability-note">Escolha o serviço e a data para ver os horários.</p>';
       return;
     }
+    if (window.LegadoSupabase && L.loadRemoteBookingsForDate && !remoteBookingsLoadedDates.has(state.date)) {
+      elements.times.innerHTML = '<p class="availability-note">Consultando horários já reservados...</p>';
+      L.loadRemoteBookingsForDate(state.date)
+        .then(() => {
+          remoteBookingsLoadedDates.add(state.date);
+          buildTimes();
+        })
+        .catch(error => {
+          console.error("Erro ao consultar horários no Supabase:", error);
+          elements.times.innerHTML = '<p class="availability-note">Não foi possível consultar os horários online agora. Tente novamente em instantes.</p>';
+        });
+      return;
+    }
     const professional = elements.professional.value || settings.professional;
     const slots = L.generateSlots(state.date, state.service.durationMinutes, { professional }).filter(slot => slot.available !== false);
     if (!slots.length) {
@@ -535,7 +549,7 @@
     elements.next.textContent = state.step === 4 ? (state.rebookingId ? "Confirmar reagendamento" : "Confirmar agendamento") : "Continuar";
   }
 
-  function createBooking() {
+  async function createBooking() {
     if (!L.isSlotAvailable({ date: state.date, startTime: state.time, durationMinutes: state.service.durationMinutes, professional: elements.professional.value || settings.professional })) {
       state.time = "";
       goToStep(3);
@@ -543,7 +557,7 @@
       return;
     }
     const now = new Date().toISOString();
-    const reservation = L.reserveBooking({
+    const bookingDraft = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       code: L.makeCode(),
       serviceId: state.service.id,
@@ -565,12 +579,13 @@
       updatedAt: now,
       rescheduledFrom: state.rebookingId,
       source: "site"
-    });
+    };
+    const reservation = window.LegadoSupabase && L.reserveBookingOnline ? await L.reserveBookingOnline(bookingDraft) : L.reserveBooking(bookingDraft);
     if (!reservation.ok) {
       state.time = "";
       goToStep(3);
       buildTimes();
-      showInlineMessage("Esse horário acabou de ser reservado. Escolha outro.");
+      showInlineMessage(reservation.reason === "conflict" ? "Esse horário acabou de ser reservado. Escolha outro." : "Não foi possível reservar agora. Tente novamente.");
       return;
     }
     const booking = reservation.booking;
@@ -787,10 +802,24 @@
     openWhatsApp(updated, "Olá! Cancelei este agendamento pelo site da Legado Barbearia.");
   }
 
-  elements.next.addEventListener("click", () => {
+  elements.next.addEventListener("click", async () => {
     if (!validateStep()) return;
     if (state.step < 4) goToStep(state.step + 1);
-    else createBooking();
+    else {
+      const originalText = elements.next.textContent;
+      elements.next.disabled = true;
+      elements.next.textContent = "Reservando...";
+      try {
+        await createBooking();
+      } catch (error) {
+        console.error("Erro ao salvar agendamento no Supabase:", error);
+        showInlineMessage(error.message || "Não foi possível salvar no Supabase.");
+      } finally {
+        elements.next.disabled = false;
+        elements.next.textContent = originalText;
+        goToStep(state.step);
+      }
+    }
   });
   elements.prev.addEventListener("click", () => goToStep(state.step - 1));
   elements.serviceChoices.addEventListener("click", event => {
@@ -913,8 +942,10 @@
       }
     }
   });
-  $("#reviewForm")?.addEventListener("submit", event => {
+  $("#reviewForm")?.addEventListener("submit", async event => {
     event.preventDefault();
+    const form = event.currentTarget;
+    const submitButton = form.querySelector("button[type='submit']");
     const name = $("#reviewName").value.trim();
     const phone = L.formatPhone($("#reviewPhone").value);
     const phoneDigits = L.normalizePhone(phone);
@@ -926,7 +957,7 @@
     const existingClient = L.getClients().find(client => client.phoneDigits === phoneDigits);
     const photo = existingClient?.photo || "";
     const items = L.getTestimonials(true);
-    items.push(L.normalizeTestimonial({
+    const testimonial = L.normalizeTestimonial({
       id: `testimonial-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       name,
       phone,
@@ -941,11 +972,30 @@
       order: items.length + 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    }));
-    L.setTestimonials(items);
-    L.upsertClient({ name, phone, phoneDigits, photo, existingCustomer: existingClient?.existingCustomer || false, notes: existingClient?.notes || "" });
-    $("#reviewForm").reset();
-    showToast("Avaliação enviada. Ela aparecerá no site depois da aprovação.");
+    });
+    try {
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+      if (window.LegadoSupabase && L.submitTestimonialOnline) {
+        await L.submitTestimonialOnline(testimonial);
+      } else {
+        items.push(testimonial);
+        L.setTestimonials(items);
+        L.upsertClient({ name, phone, phoneDigits, photo, existingCustomer: existingClient?.existingCustomer || false, notes: existingClient?.notes || "" });
+      }
+      $("#reviewForm").reset();
+      showToast("Avaliação enviada para aprovação.");
+    } catch (error) {
+      console.error("Erro ao enviar avaliação para o Supabase:", error);
+      showToast(error.message || "Não foi possível enviar a avaliação agora.", true);
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Enviar avaliação";
+      }
+    }
   });
   $("#lookupCode").addEventListener("input", event => { event.target.value = event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8); });
   elements.lookupForm.addEventListener("submit", event => {
