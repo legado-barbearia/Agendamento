@@ -593,9 +593,10 @@
     const reservation = window.LegadoSupabase && L.reserveBookingOnline ? await L.reserveBookingOnline(bookingDraft) : L.reserveBooking(bookingDraft);
     if (!reservation.ok) {
       state.time = "";
+      remoteBookingsLoadedDates.delete(`${state.date}|${elements.professional.value || settings.professional}`);
       goToStep(3);
       buildTimes();
-      showInlineMessage(reservation.reason === "conflict" ? "Esse horário acabou de ser reservado. Escolha outro." : "Não foi possível reservar agora. Tente novamente.");
+      if (reservation.reason !== "conflict") showInlineMessage("Não foi possível reservar agora. Tente novamente.");
       return;
     }
     const booking = reservation.booking;
