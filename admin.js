@@ -199,6 +199,16 @@
     return `<span class="status-badge status-${status}">${L.statusLabel(status)}</span>`;
   }
 
+  function isReservedStatus(status) {
+    return ["pending", "confirmed"].includes(status);
+  }
+
+  function reservedMarker(item) {
+    return isReservedStatus(item?.status)
+      ? '<span class="reserved-marker" title="Horario reservado e bloqueado para novos agendamentos">Reservado</span>'
+      : "";
+  }
+
   function currentMonthRange() {
     const now = new Date();
     const first = new Date(now.getFullYear(), now.getMonth(), 1, 12);
@@ -220,8 +230,8 @@
     $("#statCompleted").textContent = completedMonth.length;
     $("#statRevenue").textContent = L.formatCurrency(completedMonth.reduce((sum, item) => sum + item.priceValue, 0));
     $("#todayBookings").innerHTML = todayList.length ? todayList.map(item => `
-      <div class="today-booking-item" data-booking-id="${L.escapeHTML(item.id)}">
-        <div class="today-booking-time">${item.startTime}</div><div><strong>${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)} · até ${item.endTime}</small></div>${statusBadge(item.status)}
+      <div class="today-booking-item ${isReservedStatus(item.status) ? "is-reserved" : ""}" data-booking-id="${L.escapeHTML(item.id)}">
+        <div class="today-booking-time">${item.startTime}</div><div><strong>${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)} · até ${item.endTime}</small></div><div class="booking-state-stack">${reservedMarker(item)}${statusBadge(item.status)}</div>
       </div>`).join("") : '<div class="empty-admin"><strong>Agenda livre hoje</strong>Nenhum atendimento registrado para esta data.</div>';
   }
 
@@ -259,12 +269,12 @@
     table.innerHTML = header + bookings.map(item => {
       const activeConflicts = L.findBookingConflicts({ date: item.date, startTime: item.startTime, durationMinutes: item.durationMinutes, professional: item.professional, ignoreBookingId: item.id, statuses: ["pending", "confirmed"] });
       return `
-      <div class="booking-row ${activeConflicts.length ? "booking-row-conflict" : ""}" data-booking-id="${L.escapeHTML(item.id)}">
+      <div class="booking-row ${isReservedStatus(item.status) ? "is-reserved" : ""} ${activeConflicts.length ? "booking-row-conflict" : ""}" data-booking-id="${L.escapeHTML(item.id)}">
         <div class="booking-client" data-label="Cliente"><strong>${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.phone)} · ${L.escapeHTML(item.code)}</small></div>
         <div class="booking-cell" data-label="Data e horário"><strong>${L.escapeHTML(L.formatDate(item.date, { day: "2-digit", month: "short", year: "numeric" }))}</strong><small>${item.startTime}–${item.endTime}</small></div>
         <div class="booking-cell" data-label="Serviço"><strong>${L.escapeHTML(item.service)}</strong><small>${item.durationMinutes} min</small></div>
         <div class="booking-cell" data-label="Valor / profissional"><strong>${item.priceValue > 0 ? L.formatCurrency(item.priceValue) : "—"}</strong><small>${L.escapeHTML(item.professional)}</small></div>
-        <div data-label="Status">${statusBadge(item.status)}</div>
+        <div data-label="Status"><div class="booking-state-stack">${reservedMarker(item)}${statusBadge(item.status)}</div></div>
         <div class="booking-actions" data-label="Ações">
           <button class="icon-action" data-booking-action="edit" type="button">Editar</button>
           <button class="icon-action" data-booking-action="whatsapp" type="button">WhatsApp</button>
@@ -788,14 +798,14 @@
         </div>
         <div class="day-calendar">
           ${entries.length ? entries.map(entry => entry.type === "booking" ? `
-            <article class="calendar-booking ${entry.item.status}">
+            <article class="calendar-booking ${entry.item.status} ${isReservedStatus(entry.item.status) ? "is-reserved" : ""}">
               <div class="calendar-booking-time">${entry.item.startTime}<small>até ${entry.item.endTime}</small></div>
               <div class="calendar-booking-details">
                 <strong>${L.escapeHTML(entry.item.name)}</strong>
                 <small>${L.escapeHTML(entry.item.service)} · ${L.escapeHTML(entry.item.phone)}</small>
                 <small>${L.escapeHTML(entry.item.professional || L.getSettings().professional)}</small>
               </div>
-              ${statusBadge(entry.item.status)}
+              <div class="booking-state-stack">${reservedMarker(entry.item)}${statusBadge(entry.item.status)}</div>
               <div class="calendar-booking-actions"><button type="button" data-booking-edit="${L.escapeHTML(entry.item.id)}">Ver detalhes / editar</button></div>
             </article>` : `
             <div class="calendar-block"><strong>${entry.item.allDay ? "Dia bloqueado" : `${entry.item.startTime}–${entry.item.endTime}`}</strong> · ${L.escapeHTML(entry.item.reason)}</div>`).join("") : `
@@ -813,7 +823,7 @@
         const list = bookings.filter(item => item.date === iso && item.status !== "cancelled").sort((a, b) => a.startTime.localeCompare(b.startTime));
         return `<div class="week-day ${iso === L.todayISO() ? "today" : ""}" data-calendar-date="${iso}" role="button" tabindex="0" aria-label="Abrir agenda de ${L.formatDate(iso)}">
           <div class="week-day-head"><span>${date.toLocaleDateString("pt-BR", { weekday: "short" })}</span><strong>${date.getDate()}</strong><small>${list.length} agendamento${list.length === 1 ? "" : "s"}</small></div>
-          <div class="week-day-body">${list.map(item => `<div class="week-event ${item.status}"><strong>${item.startTime} · ${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)}</small></div>`).join("") || '<div class="month-more">Agenda livre</div>'}<span class="week-day-open">Abrir o dia →</span></div>
+          <div class="week-day-body">${list.map(item => `<div class="week-event ${item.status} ${isReservedStatus(item.status) ? "is-reserved" : ""}"><strong>${item.startTime} · ${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)}</small>${isReservedStatus(item.status) ? "<em>Reservado</em>" : ""}</div>`).join("") || '<div class="month-more">Agenda livre</div>'}<span class="week-day-open">Abrir o dia →</span></div>
         </div>`;
       }).join("")}</div>`;
     }
@@ -829,7 +839,7 @@
         const list = bookings.filter(item => item.date === iso && item.status !== "cancelled").sort((a, b) => a.startTime.localeCompare(b.startTime));
         return `<div class="month-day ${date.getMonth() !== first.getMonth() ? "outside" : ""} ${iso === L.todayISO() ? "today" : ""}" data-calendar-date="${iso}" role="button" tabindex="0" aria-label="Abrir agenda de ${L.formatDate(iso)}">
           <div class="month-day-number"><span>${date.getDate()}</span>${list.length ? `<small>${list.length}</small>` : ""}</div>
-          ${list.slice(0, 3).map(item => `<div class="month-event ${item.status}">${item.startTime} ${L.escapeHTML(item.name)}</div>`).join("")}
+          ${list.slice(0, 3).map(item => `<div class="month-event ${item.status} ${isReservedStatus(item.status) ? "is-reserved" : ""}">${isReservedStatus(item.status) ? "Reservado · " : ""}${item.startTime} ${L.escapeHTML(item.name)}</div>`).join("")}
           ${list.length > 3 ? `<div class="month-more">+${list.length - 3} outros</div>` : ""}
           ${!list.length ? '<div class="month-more">Livre</div>' : ""}
         </div>`;
