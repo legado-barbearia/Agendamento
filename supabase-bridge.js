@@ -428,6 +428,16 @@
     return saved;
   };
 
+  L.upsertBookingOnline = async function upsertBookingOnline(booking) {
+    const normalized = L.normalizeBooking(booking);
+    const row = bookingRow(normalized);
+    const rows = await upsert("bookings", row, true);
+    const saved = mapBooking((rows || [])[0] || row);
+    original.upsertBooking(saved);
+    await upsert("clients", clientRow({ name: saved.name, phone: saved.phone, phoneDigits: saved.phoneDigits, photo: saved.clientPhoto }), true);
+    return saved;
+  };
+
   L.deleteBooking = function deleteBooking(id) {
     original.deleteBooking(id);
     syncQuietly(() => removeRows("bookings", id, true));

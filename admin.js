@@ -903,7 +903,7 @@
   $("#editorTime").addEventListener("change", updateEditorSummary);
   $("#editorPhone").addEventListener("input", event => { event.target.value = L.formatPhone(event.target.value); });
 
-  $("#bookingEditorForm").addEventListener("submit", event => {
+  $("#bookingEditorForm").addEventListener("submit", async event => {
     event.preventDefault();
     const id = $("#editorBookingId").value; const existing = id ? L.getBookings().find(item => item.id === id) : null;
     const service = L.getServiceById($("#editorService").value); const date = $("#editorDate").value; const time = $("#editorTime").value; const status = $("#editorStatus").value;
@@ -913,8 +913,31 @@
     const statusesToCheck = ["pending", "confirmed"];
     if (!inactiveStatus && !L.isSlotAvailable({ date, startTime: time, durationMinutes: service.durationMinutes, professional, ignoreBookingId: id || null, allowPast: false, bookingStatuses: statusesToCheck })) return showToast("Este horário entra em conflito com outro agendamento confirmado ou com um bloqueio.", true);
 
-    const saved = L.upsertBooking({ ...existing, id: id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, code: existing?.code || L.makeCode(), serviceId: service.id, service: service.name, durationMinutes: service.durationMinutes, priceValue: service.price, date, dateLabel: L.formatDate(date), startTime: time, time, endTime: L.addMinutes(time, service.durationMinutes), name: $("#editorName").value.trim(), phone: L.formatPhone($("#editorPhone").value), professional, notes: $("#editorNotes").value.trim(), status, source: existing?.source || "admin", createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
-    closeBookingEditor(); showToast(existing ? "Agendamento atualizado." : `Agendamento criado. Código ${saved.code}`);
+    const submitButton = event.submitter || $("#bookingEditorForm").querySelector('button[type="submit"]');
+    const originalText = submitButton?.textContent || "";
+    const draft = { ...existing, id: id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, code: existing?.code || L.makeCode(), serviceId: service.id, service: service.name, durationMinutes: service.durationMinutes, priceValue: service.price, date, dateLabel: L.formatDate(date), startTime: time, time, endTime: L.addMinutes(time, service.durationMinutes), name: $("#editorName").value.trim(), phone: L.formatPhone($("#editorPhone").value), professional, notes: $("#editorNotes").value.trim(), status, source: existing?.source || "admin", createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    if (submitButton) { submitButton.disabled = true; submitButton.textContent = "Salvando..."; }
+    try {
+      let saved;
+      if (!existing && !inactiveStatus && status === "confirmed" && window.LegadoSupabase && L.reserveBookingOnline) {
+        const reservation = await L.reserveBookingOnline(draft);
+        if (!reservation.ok) return showToast("Este horário acabou de ser reservado. Escolha outro horário disponível.", true);
+        saved = reservation.booking;
+      } else if (window.LegadoSupabase && L.upsertBookingOnline) {
+        saved = await L.upsertBookingOnline(draft);
+      } else {
+        saved = L.upsertBooking(draft);
+      }
+      closeBookingEditor(); showToast(existing ? "Agendamento atualizado." : `Agendamento criado. Código ${saved.code}`);
+    } catch (error) {
+      console.error("Erro ao salvar agendamento no admin:", error);
+      const message = /slot_conflict|not_available|overlap|duplicate|bookings_no_active_overlap/i.test(String(error.message || ""))
+        ? "Este horário não está mais disponível. Escolha outro horário."
+        : "Não foi possível salvar no Supabase. Verifique login, SQL e permissões.";
+      showToast(message, true);
+    } finally {
+      if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalText; }
+    }
   });
 
   function setReportDefaults() {

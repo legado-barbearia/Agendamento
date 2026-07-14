@@ -135,13 +135,57 @@ create table if not exists public.testimonials (
 );
 
 alter table public.bookings add column if not exists client_photo text not null default '';
+alter table public.bookings add column if not exists service_id text;
+alter table public.bookings add column if not exists service_name text not null default 'Atendimento Legado';
+alter table public.bookings add column if not exists duration_minutes integer not null default 30;
+alter table public.bookings add column if not exists price_value numeric(10,2) not null default 0;
+alter table public.bookings add column if not exists booking_date date not null default current_date;
+alter table public.bookings add column if not exists start_time time not null default '09:00';
+alter table public.bookings add column if not exists end_time time not null default '09:30';
+alter table public.bookings add column if not exists client_name text not null default 'Cliente Legado';
+alter table public.bookings add column if not exists client_phone text not null default '';
+alter table public.bookings add column if not exists phone_digits text not null default '';
+alter table public.bookings add column if not exists professional text not null default 'Gilliel Glaydson';
+alter table public.bookings add column if not exists notes text not null default '';
+alter table public.bookings add column if not exists status text not null default 'confirmed';
+alter table public.bookings add column if not exists source text not null default 'site';
+alter table public.bookings add column if not exists cancellation_reason text;
+alter table public.bookings add column if not exists created_at timestamptz not null default now();
+alter table public.bookings add column if not exists updated_at timestamptz not null default now();
 alter table public.bookings alter column status set default 'confirmed';
+alter table public.clients add column if not exists client_name text not null default 'Cliente Legado';
+alter table public.clients add column if not exists client_phone text not null default '';
+alter table public.clients add column if not exists phone_digits text not null default '';
+alter table public.clients add column if not exists profile_photo text not null default '';
 alter table public.clients add column if not exists is_existing_customer boolean not null default false;
+alter table public.clients add column if not exists notes text not null default '';
+alter table public.clients add column if not exists first_seen_at timestamptz not null default now();
+alter table public.clients add column if not exists last_seen_at timestamptz not null default now();
+alter table public.clients add column if not exists created_at timestamptz not null default now();
+alter table public.clients add column if not exists updated_at timestamptz not null default now();
+alter table public.portfolio add column if not exists title text not null default 'Portfolio Legado';
+alter table public.portfolio add column if not exists category text not null default 'Cortes';
+alter table public.portfolio add column if not exists description text not null default '';
+alter table public.portfolio add column if not exists image_url text not null default 'assets/corte.webp';
+alter table public.portfolio add column if not exists alt_text text not null default '';
+alter table public.portfolio add column if not exists featured boolean not null default false;
+alter table public.portfolio add column if not exists active boolean not null default true;
+alter table public.portfolio add column if not exists sort_order integer not null default 0;
+alter table public.portfolio add column if not exists created_at timestamptz not null default now();
+alter table public.portfolio add column if not exists updated_at timestamptz not null default now();
+alter table public.testimonials add column if not exists client_name text not null default 'Cliente Legado';
 alter table public.testimonials add column if not exists client_phone text not null default '';
 alter table public.testimonials add column if not exists phone_digits text not null default '';
+alter table public.testimonials add column if not exists service_name text not null default 'Atendimento Legado';
+alter table public.testimonials add column if not exists testimonial text not null default '';
+alter table public.testimonials add column if not exists rating integer not null default 5;
 alter table public.testimonials add column if not exists profile_photo text not null default '';
 alter table public.testimonials add column if not exists status text not null default 'pending';
+alter table public.testimonials add column if not exists active boolean not null default false;
 alter table public.testimonials add column if not exists source text not null default 'admin';
+alter table public.testimonials add column if not exists sort_order integer not null default 0;
+alter table public.testimonials add column if not exists created_at timestamptz not null default now();
+alter table public.testimonials add column if not exists updated_at timestamptz not null default now();
 
 alter table public.profiles enable row level security;
 alter table public.business_settings enable row level security;
@@ -270,8 +314,25 @@ grant insert on public.bookings, public.clients, public.testimonials to anon;
 grant select, update on public.clients to anon;
 grant all on public.business_settings, public.availability, public.services, public.blocked_slots, public.bookings, public.clients, public.portfolio, public.testimonials to authenticated;
 
+-- Remove versoes antigas das RPCs, mesmo quando a assinatura/retorno mudou.
+-- Isso evita erros como "cannot change return type of existing function".
+do $$
+declare
+  fn record;
+begin
+  for fn in
+    select n.nspname as schema_name, p.proname as function_name, pg_get_function_identity_arguments(p.oid) as arguments
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('booked_intervals', 'booked_intervals_for_professional', 'lookup_booking', 'reserve_booking')
+  loop
+    execute format('drop function if exists %I.%I(%s) cascade', fn.schema_name, fn.function_name, fn.arguments);
+  end loop;
+end $$;
+
 -- Retorna somente os intervalos ocupados, sem dados pessoais.
-drop function if exists public.booked_intervals(date);
+drop function if exists public.booked_intervals(date) cascade;
 
 create or replace function public.booked_intervals(p_date date)
 returns table (start_time time, end_time time, professional text)
@@ -284,7 +345,7 @@ $$;
 grant execute on function public.booked_intervals(date) to anon, authenticated;
 
 -- Retorna somente os intervalos ocupados do profissional escolhido.
-drop function if exists public.booked_intervals_for_professional(date, text);
+drop function if exists public.booked_intervals_for_professional(date, text) cascade;
 
 create or replace function public.booked_intervals_for_professional(p_date date, p_professional text)
 returns table (start_time time, end_time time, professional text)
@@ -299,7 +360,7 @@ $$;
 grant execute on function public.booked_intervals_for_professional(date, text) to anon, authenticated;
 
 -- Consulta segura por telefone e código. Não lista agendamentos de terceiros.
-drop function if exists public.lookup_booking(text, text);
+drop function if exists public.lookup_booking(text, text) cascade;
 
 create or replace function public.lookup_booking(p_phone_digits text, p_code text)
 returns table (
@@ -322,7 +383,7 @@ grant execute on function public.lookup_booking(text, text) to anon, authenticat
 -- Valida no banco: serviço, expediente, antecedência, bloqueios, barbeiro e conflitos.
 drop function if exists public.reserve_booking(
   uuid, text, text, text, integer, numeric, date, time, text, text, text, text, text, text, text
-);
+) cascade;
 
 revoke insert on public.bookings from anon;
 drop policy if exists "public create confirmed booking" on public.bookings;
@@ -491,20 +552,24 @@ begin
     'confirmed', coalesce(nullif(p_source, ''), 'site'), now(), now()
   );
 
-  insert into public.clients (
-    client_name, client_phone, phone_digits, profile_photo,
-    first_seen_at, last_seen_at, created_at, updated_at
-  )
-  values (
-    trim(p_client_name), p_client_phone, v_phone_digits, coalesce(p_client_photo, ''),
-    now(), now(), now(), now()
-  )
-  on conflict (phone_digits) do update
-  set client_name = excluded.client_name,
-      client_phone = excluded.client_phone,
-      profile_photo = coalesce(nullif(excluded.profile_photo, ''), public.clients.profile_photo),
+  update public.clients
+  set client_name = trim(p_client_name),
+      client_phone = p_client_phone,
+      profile_photo = coalesce(nullif(p_client_photo, ''), profile_photo),
       last_seen_at = now(),
-      updated_at = now();
+      updated_at = now()
+  where phone_digits = v_phone_digits;
+
+  if not found then
+    insert into public.clients (
+      client_name, client_phone, phone_digits, profile_photo,
+      first_seen_at, last_seen_at, created_at, updated_at
+    )
+    values (
+      trim(p_client_name), p_client_phone, v_phone_digits, coalesce(p_client_photo, ''),
+      now(), now(), now(), now()
+    );
+  end if;
 
   return query
   select b.id, b.code, b.service_id, b.service_name, b.duration_minutes, b.price_value,
