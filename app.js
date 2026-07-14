@@ -170,7 +170,7 @@
   function renderBarbers() {
     const grid = $("#barbersGrid");
     if (!grid) return;
-    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const names = publicBarberNames();
     grid.innerHTML = names.map((name, index) => {
       const profile = barberProfile(name, index);
       return `
@@ -182,7 +182,7 @@
           <div>
             <small>${L.escapeHTML(profile.role)}</small>
             <h3>${L.escapeHTML(name)}</h3>
-            <p>${L.escapeHTML(profile.specialty)}. ${index === 0 ? L.escapeHTML(settings.professionalBio || "Atendimento cuidadoso, técnica e acabamento alinhado ao padrão Legado.") : "Atendimento com hora marcada e respeito ao estilo de cada cliente."}</p>
+            <p>${L.escapeHTML(profile.bio || `${profile.specialty}. ${index === 0 ? settings.professionalBio || "Atendimento cuidadoso, técnica e acabamento alinhado ao padrão Legado." : "Atendimento com hora marcada e respeito ao estilo de cada cliente."}`)}</p>
             <div class="barber-card-meta"><span>★ ${profile.rating}</span><span>${profile.averageTime}</span></div>
           </div>
         </article>`;
@@ -191,26 +191,37 @@
   }
 
   function barberProfile(name, index = 0) {
-    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const names = publicBarberNames();
     const primary = settings.professional || names[0] || "Barbeiro Legado";
     const isPrimary = String(name).trim().toLowerCase() === String(primary).trim().toLowerCase() || index === 0;
     const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
     const savedPhoto = settings.barberPhotos?.[name] || settings.barberPhotos?.[L.slugify(name)] || "";
+    const savedProfile = settings.barberProfiles?.[name] || settings.barberProfiles?.[L.slugify(name)] || {};
     return {
       name,
       initials,
       photo: savedPhoto || "assets/logo-192.png",
       role: isPrimary ? "Fundador e barbeiro principal" : "Barbeiro Legado",
       specialty: isPrimary ? "Cortes, barba e experiência completa" : "Cortes masculinos e acabamento",
+      bio: savedProfile.bio || "",
       rating: isPrimary ? "4.9" : "4.8",
       averageTime: "30-60 min"
     };
   }
 
+  function publicBarberNames() {
+    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const activeNames = names.filter(name => {
+      const profile = settings.barberProfiles?.[name] || settings.barberProfiles?.[L.slugify(name)] || {};
+      return profile.active !== false && profile.showOnSite !== false;
+    });
+    return activeNames.length ? activeNames : names.slice(0, 1);
+  }
+
   function renderBookingBarberCards() {
     const box = $("#bookingBarberCards");
     if (!box) return;
-    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    const names = publicBarberNames();
     const selected = elements.professional.value || settings.professional || names[0];
     box.innerHTML = names.map((name, index) => {
       const profile = barberProfile(name, index);
@@ -603,7 +614,15 @@
 
     if (state.rebookingId) {
       const original = L.getBookings().find(item => String(item.id) === String(state.rebookingId));
-      if (original) L.upsertBooking({ ...original, status: "cancelled", cancellationReason: `Reagendado para ${booking.code}`, updatedAt: now });
+      if (original) {
+        try {
+          if (window.LegadoSupabase && L.cancelBookingOnline) await L.cancelBookingOnline(original, `Reagendado para ${booking.code}`);
+          else L.upsertBooking({ ...original, status: "cancelled", cancellationReason: `Reagendado para ${booking.code}`, updatedAt: now });
+        } catch (error) {
+          console.error("Erro ao cancelar agendamento anterior no reagendamento:", error);
+          showToast("Novo horário reservado. Fale conosco para confirmar a liberação do horário anterior.", true);
+        }
+      }
     }
 
     lastBooking = booking;
@@ -658,7 +677,9 @@
   function applySettings() {
     settings = L.getSettings();
     const selectedProfessional = elements.professional.value || settings.professional;
-    elements.professional.innerHTML = settings.barbers.map(name => `<option value="${L.escapeHTML(name)}" ${name === selectedProfessional ? "selected" : ""}>${L.escapeHTML(name)}</option>`).join("");
+    const publicNames = publicBarberNames();
+    elements.professional.innerHTML = publicNames.map(name => `<option value="${L.escapeHTML(name)}" ${name === selectedProfessional ? "selected" : ""}>${L.escapeHTML(name)}</option>`).join("");
+    if (!publicNames.includes(elements.professional.value)) elements.professional.value = publicNames[0] || settings.professional;
     renderBookingBarberCards();
     const whatsapp = $("#footerWhatsapp");
     whatsapp.href = `https://wa.me/${String(settings.whatsappNumber).replace(/\D/g, "")}`;
@@ -812,9 +833,18 @@
     elements.lookupResult.dataset.bookingId = booking.id;
   }
 
-  function lookupBooking(phone, code) {
+  async function lookupBooking(phone, code) {
     const phoneDigits = L.normalizePhone(phone);
     const normalizedCode = String(code || "").trim().toUpperCase();
+    if (window.LegadoSupabase && L.lookupBookingOnline) {
+      try {
+        const remote = await L.lookupBookingOnline(phoneDigits, normalizedCode);
+        if (remote) return remote;
+      } catch (error) {
+        console.error("Erro ao consultar agendamento no Supabase:", error);
+        showToast("Não consegui consultar online agora. Vou conferir os dados salvos neste aparelho.", true);
+      }
+    }
     return L.getBookings().find(item => item.phoneDigits === phoneDigits && item.code.toUpperCase() === normalizedCode);
   }
 
@@ -834,13 +864,21 @@
     showToast("Escolha a nova data e o novo horário. O anterior será desmarcado ao finalizar.");
   }
 
-  function cancelBooking(booking) {
+  async function cancelBooking(booking) {
     if (!L.canClientCancel(booking)) { showToast("O prazo para cancelamento pelo site terminou.", true); return; }
     if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
-    const updated = L.upsertBooking({ ...booking, status: "cancelled", cancellationReason: "Cancelado pelo cliente", updatedAt: new Date().toISOString() });
-    renderLookup(updated);
-    showToast("Agendamento cancelado.");
-    openWhatsApp(updated, "Olá! Cancelei este agendamento pelo site da Legado Barbearia.");
+    try {
+      showToast("Cancelando agendamento...");
+      const updated = window.LegadoSupabase && L.cancelBookingOnline
+        ? await L.cancelBookingOnline(booking, "Cancelado pelo cliente")
+        : L.upsertBooking({ ...booking, status: "cancelled", cancellationReason: "Cancelado pelo cliente", updatedAt: new Date().toISOString() });
+      renderLookup(updated);
+      showToast("Agendamento cancelado. O horário foi liberado.");
+      openWhatsApp(updated, "Olá! Cancelei este agendamento pelo site da Legado Barbearia.");
+    } catch (error) {
+      console.error("Erro ao cancelar agendamento no Supabase:", error);
+      showToast("Não foi possível cancelar online. Confira o código ou fale conosco pelo WhatsApp.", true);
+    }
   }
 
   elements.next.addEventListener("click", async () => {
@@ -919,7 +957,7 @@
     url.searchParams.set("telefone", lastBooking.phoneDigits || L.normalizePhone(lastBooking.phone));
     url.searchParams.set("codigo", lastBooking.code);
     url.hash = "agendar";
-    try { await navigator.clipboard.writeText(url.toString()); showToast("Link de consulta copiado. Ele funciona neste aparelho até a conexão online."); }
+    try { await navigator.clipboard.writeText(url.toString()); showToast("Link de consulta copiado."); }
     catch { showToast("Não foi possível copiar o link.", true); }
   });
 
@@ -1052,14 +1090,26 @@
     }
   });
   $("#lookupCode").addEventListener("input", event => { event.target.value = event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8); });
-  elements.lookupForm.addEventListener("submit", event => {
+  elements.lookupForm.addEventListener("submit", async event => {
     event.preventDefault();
-    const booking = lookupBooking($("#lookupPhone").value, $("#lookupCode").value);
-    if (!booking) {
-      elements.lookupResult.innerHTML = '<div class="empty-state"><strong>Agendamento não encontrado</strong><p>Confira o WhatsApp e o código. Nesta versão, a consulta funciona apenas no aparelho usado para agendar.</p></div>';
-      return;
+    const submitButton = elements.lookupForm.querySelector("button[type='submit']");
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Consultando...";
     }
-    renderLookup(booking);
+    try {
+      const booking = await lookupBooking($("#lookupPhone").value, $("#lookupCode").value);
+      if (!booking) {
+        elements.lookupResult.innerHTML = '<div class="empty-state"><strong>Agendamento não encontrado</strong><p>Confira o WhatsApp e o código. Se o agendamento foi feito recentemente, tente novamente em alguns segundos.</p></div>';
+      } else {
+        renderLookup(booking);
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Consultar";
+      }
+    }
   });
   elements.lookupResult.addEventListener("click", event => {
     const action = event.target.closest("[data-client-action]")?.dataset.clientAction;
@@ -1215,7 +1265,8 @@
   if (query.get("telefone") && query.get("codigo")) {
     $("#lookupPhone").value = L.formatPhone(query.get("telefone"));
     $("#lookupCode").value = query.get("codigo").toUpperCase();
-    const found = lookupBooking(query.get("telefone"), query.get("codigo"));
-    if (found) renderLookup(found);
+    lookupBooking(query.get("telefone"), query.get("codigo")).then(found => {
+      if (found) renderLookup(found);
+    });
   }
 })();

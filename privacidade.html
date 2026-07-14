@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#071728" />
   <meta name="description" content="Política de privacidade e uso de dados da Legado Barbearia." />
   <title>Privacidade | Legado Barbearia</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="assets/app-icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/app-icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -15,32 +17,57 @@
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="site-header">
-    <a class="brand" href="index.html"><img src="assets/logo.png" alt="Logo Legado Barbearia" /><span><strong>LEGADO</strong><small>BARBEARIA</small></span></a>
+    <a class="brand" href="index.html" aria-label="Voltar para o site da Legado Barbearia"><img src="assets/logo.png" alt="Logo Legado Barbearia" /><span><strong>LEGADO</strong><small>BARBEARIA</small></span></a>
     <a class="button button-small" href="index.html#agendar">Voltar ao site</a>
   </header>
+
   <main class="legal-page">
     <article class="legal-card">
       <span class="eyebrow">PRIVACIDADE E TRANSPARÊNCIA</span>
-      <h1>Uso de dados no agendamento</h1>
-      <p class="legal-lead">Esta página explica de forma simples como os dados informados no site são usados pela Legado Barbearia.</p>
+      <h1>Política de privacidade</h1>
+      <p class="legal-lead">Esta página explica, de forma simples, como a Legado Barbearia coleta, usa, armazena e protege os dados informados no site, no aplicativo instalado e no painel administrativo.</p>
 
-      <h2>Quais dados são solicitados</h2>
-      <p>O formulário pode solicitar nome, número de WhatsApp, serviço, data, horário, profissional escolhido e observações relacionadas ao atendimento.</p>
+      <h2>1. Quem é responsável pelos dados</h2>
+      <p>A responsável pelo uso dos dados é a Legado Barbearia, localizada em Mineiros - GO. O contato para dúvidas, correções ou solicitações é o WhatsApp oficial informado ao final desta página.</p>
 
-      <h2>Para que os dados são usados</h2>
-      <p>As informações servem exclusivamente para registrar, organizar, confirmar, reagendar ou cancelar atendimentos e para manter contato com o cliente sobre o horário reservado.</p>
+      <h2>2. Quais dados podem ser coletados</h2>
+      <p>Durante o uso do site, podemos solicitar nome, WhatsApp, foto de perfil opcional, indicação se você já é cliente, preferências de atendimento, serviço escolhido, barbeiro, data, horário, observações do agendamento, avaliação enviada e autorização para publicação do feedback.</p>
+      <p>No painel administrativo, também podem ser registrados histórico de atendimentos, status do agendamento, cancelamentos, reagendamentos, observações internas e dados necessários para organizar a agenda.</p>
 
-      <h2>Armazenamento nesta versão</h2>
-      <p>Enquanto o sistema não estiver conectado ao Supabase, os dados ficam armazenados localmente no navegador utilizado. Eles não são sincronizados automaticamente entre aparelhos.</p>
+      <h2>3. Para que os dados são usados</h2>
+      <p>Os dados são usados para criar seu perfil, preencher seus próximos agendamentos, reservar horários, evitar conflitos na agenda, consultar, cancelar ou reagendar atendimentos, entrar em contato pelo WhatsApp, analisar avaliações e melhorar a experiência dentro da barbearia.</p>
+      <p>A Legado não vende dados pessoais e não compartilha informações de clientes para publicidade de terceiros.</p>
 
-      <h2>Compartilhamento</h2>
-      <p>A Legado Barbearia não deve vender ou compartilhar os dados dos clientes para publicidade de terceiros. O WhatsApp é aberto somente quando o próprio usuário ou administrador escolhe enviar uma mensagem.</p>
+      <h2>4. Perfil do cliente e foto</h2>
+      <p>A criação do perfil evita que você precise preencher nome e WhatsApp toda vez. A foto de perfil é opcional e pode ser usada para identificação no atendimento e, se você autorizar ao enviar uma avaliação, pode aparecer junto ao feedback aprovado no site.</p>
 
-      <h2>Correção e exclusão</h2>
-      <p>O cliente pode solicitar correção ou exclusão de seus dados entrando em contato pelo WhatsApp da barbearia. O administrador também pode excluir registros pelo painel.</p>
+      <h2>5. Agendamentos</h2>
+      <p>Ao concluir um agendamento, o horário fica reservado no sistema e deixa de aparecer como disponível para outros clientes. A consulta do agendamento é feita usando seu WhatsApp e o código gerado no momento da reserva.</p>
+      <p>Quando houver cancelamento ou reagendamento pelo site, o sistema atualiza o registro para manter histórico e liberar ou reservar o horário correto.</p>
 
-      <h2>Segurança futura</h2>
-      <p>Quando a integração online for ativada, o banco de dados deverá utilizar autenticação, regras de acesso e políticas de segurança para limitar o acesso às informações.</p>
+      <h2>6. Avaliações e feedbacks</h2>
+      <p>As avaliações enviadas pelo site não aparecem automaticamente. Elas entram para análise no painel administrativo. Somente avaliações aprovadas podem ser exibidas publicamente, com nome, serviço, comentário, estrelas e foto de perfil quando houver autorização.</p>
+
+      <h2>7. Onde os dados ficam armazenados</h2>
+      <p>Quando a integração online está ativa, os dados são armazenados no Supabase, plataforma usada para banco de dados, autenticação, regras de acesso e armazenamento de fotos. O navegador também pode manter dados locais para sessão, cache, preenchimento automático e funcionamento do PWA.</p>
+      <p>Em caso de uso sem conexão ou sem Supabase configurado, alguns dados podem ficar apenas no navegador utilizado, até serem sincronizados ou exportados pelo administrador.</p>
+
+      <h2>8. WhatsApp, Instagram e serviços externos</h2>
+      <p>Ao tocar em links de WhatsApp, Instagram, mapa ou calendário, você pode sair do ambiente da Legado e usar serviços de terceiros. Esses serviços possuem suas próprias políticas de privacidade.</p>
+
+      <h2>9. Segurança</h2>
+      <p>O painel administrativo exige autenticação e perfil autorizado. As regras de acesso do Supabase limitam o que clientes públicos, administradores e usuários autenticados podem consultar ou alterar. Ainda assim, nenhum sistema é totalmente imune a falhas, por isso a Legado mantém acesso restrito e recomenda backups regulares.</p>
+
+      <h2>10. Por quanto tempo os dados são mantidos</h2>
+      <p>Os dados podem ser mantidos enquanto forem necessários para histórico de atendimento, organização da agenda, relacionamento com o cliente, controle administrativo ou cumprimento de obrigações legais. O cliente pode solicitar correção ou exclusão quando desejar.</p>
+
+      <h2>11. Seus direitos</h2>
+      <p>Você pode solicitar confirmação de uso dos dados, correção, atualização, exclusão, informação sobre compartilhamento e revisão de consentimentos. Para isso, entre em contato pelo WhatsApp oficial da Legado Barbearia.</p>
+
+      <h2>12. Atualizações desta política</h2>
+      <p>Esta política pode ser atualizada conforme o sistema evoluir, especialmente com novas funções de agenda, área do cliente, avaliações, produtos, notificações ou integrações.</p>
+
+      <p class="policy-note"><strong>Última atualização:</strong> 13 de julho de 2026.</p>
 
       <div class="legal-contact">
         <strong>Legado Barbearia</strong>
@@ -49,5 +76,10 @@
       </div>
     </article>
   </main>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    }
+  </script>
 </body>
 </html>

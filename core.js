@@ -10,6 +10,13 @@
     portfolio: "legadoPortfolio",
     testimonials: "legadoTestimonials",
     clients: "legadoClients",
+    products: "legadoProducts",
+    payments: "legadoPayments",
+    commissions: "legadoCommissions",
+    settlements: "legadoBarberSettlements",
+    inventoryMovements: "legadoInventoryMovements",
+    productSales: "legadoProductSales",
+    cashRegisters: "legadoCashRegisters",
     credentials: "legadoAdminCredentials",
     session: "legadoAdminSession"
   };
@@ -35,6 +42,8 @@
     professionalBio: "Gilliel Glaydson une precisão, atenção aos detalhes e atendimento personalizado para entregar cortes e barbas alinhados ao perfil de cada cliente.",
     professionalPhoto: "assets/legado-gilliel-fundador.jpg",
     barberPhotos: {},
+    barberCommissions: {},
+    barberProfiles: {},
     portfolioEyebrow: "PORTFÓLIO",
     portfolioTitle: "Resultados reais, feitos na Legado.",
     portfolioText: "Fotos reais de cortes, barbas, acabamentos e transformações realizadas na barbearia.",
@@ -164,6 +173,7 @@
 
   const DEFAULT_TESTIMONIALS = [];
   const DEFAULT_CLIENTS = [];
+  const DEFAULT_PRODUCTS = [];
   const ICONS = ["corte.webp", "barba.webp", "produtos.webp", "agendamento.webp"];
   const LEGACY_SERVICE_DURATIONS = {
     "corte-classico": 45,
@@ -291,6 +301,7 @@
     if (!merged.barbers.length) merged.barbers = [merged.professional || DEFAULT_SETTINGS.professional];
     if (!merged.professional || !merged.barbers.includes(merged.professional)) merged.professional = merged.barbers[0];
     merged.barberPhotos = merged.barberPhotos && typeof merged.barberPhotos === "object" && !Array.isArray(merged.barberPhotos) ? merged.barberPhotos : {};
+    merged.barberProfiles = merged.barberProfiles && typeof merged.barberProfiles === "object" && !Array.isArray(merged.barberProfiles) ? merged.barberProfiles : {};
     return merged;
   }
 
@@ -468,6 +479,293 @@
       }));
     });
     return [...byPhone.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+
+  function normalizeProduct(product, index = 0) {
+    const price = parsePrice(product?.price ?? product?.salePrice ?? product?.sale_price ?? 0);
+    const cost = parsePrice(product?.cost ?? product?.costPrice ?? product?.cost_price ?? 0);
+    const quantity = Math.max(0, Number(product?.quantity ?? product?.stock ?? 0) || 0);
+    const minStock = Math.max(0, Number(product?.minStock ?? product?.minimumStock ?? product?.minimum_stock ?? 0) || 0);
+    return {
+      id: String(product?.id || `${slugify(product?.name || "produto")}-${Date.now()}-${index}`),
+      name: String(product?.name || "Produto Legado"),
+      description: String(product?.description || ""),
+      category: String(product?.category || "Geral"),
+      image: String(product?.image || product?.photo || ""),
+      cost,
+      price,
+      quantity,
+      minStock,
+      code: String(product?.code || product?.sku || ""),
+      barberCommission: Math.max(0, Number(product?.barberCommission ?? product?.barber_commission ?? 0) || 0),
+      active: product?.active !== false,
+      createdAt: product?.createdAt || product?.created_at || new Date().toISOString(),
+      updatedAt: product?.updatedAt || product?.updated_at || new Date().toISOString()
+    };
+  }
+
+  function getProducts(includeInactive = false) {
+    const raw = loadRaw(KEYS.products, DEFAULT_PRODUCTS);
+    const items = Array.isArray(raw) ? raw.map(normalizeProduct) : [];
+    return items
+      .filter(item => includeInactive || item.active)
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+
+  function setProducts(products) {
+    save(KEYS.products, (Array.isArray(products) ? products : []).map(normalizeProduct));
+  }
+
+  function upsertProduct(product) {
+    const normalized = normalizeProduct({ ...product, updatedAt: new Date().toISOString() });
+    const products = getProducts(true);
+    const index = products.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) products[index] = normalized;
+    else products.push(normalized);
+    setProducts(products);
+    return normalized;
+  }
+
+  function normalizeInventoryMovement(movement, index = 0) {
+    const type = ["entrada", "saida", "venda", "perda", "ajuste"].includes(movement?.type || movement?.movement_type) ? (movement.type || movement.movement_type) : "ajuste";
+    return {
+      id: String(movement?.id || `inventory-${Date.now()}-${index}`),
+      productId: String(movement?.productId || movement?.product_id || ""),
+      productName: String(movement?.productName || movement?.product_name || ""),
+      type,
+      quantity: Math.max(0, Number(movement?.quantity ?? 0) || 0),
+      reason: String(movement?.reason || ""),
+      createdAt: movement?.createdAt || movement?.created_at || new Date().toISOString()
+    };
+  }
+
+  function getInventoryMovements() {
+    const raw = loadRaw(KEYS.inventoryMovements, []);
+    const items = Array.isArray(raw) ? raw.map(normalizeInventoryMovement) : [];
+    return items.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function setInventoryMovements(movements) {
+    save(KEYS.inventoryMovements, (Array.isArray(movements) ? movements : []).map(normalizeInventoryMovement));
+  }
+
+  function upsertInventoryMovement(movement) {
+    const normalized = normalizeInventoryMovement(movement);
+    const movements = getInventoryMovements();
+    const index = movements.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) movements[index] = normalized;
+    else movements.push(normalized);
+    setInventoryMovements(movements);
+    return normalized;
+  }
+
+  function normalizeProductSale(sale, index = 0) {
+    const quantity = Math.max(1, Number(sale?.quantity ?? 1) || 1);
+    const unitPrice = parsePrice(sale?.unitPrice ?? sale?.unit_price ?? sale?.price ?? 0);
+    const totalAmount = parsePrice(sale?.totalAmount ?? sale?.total_amount ?? unitPrice * quantity);
+    return {
+      id: String(sale?.id || `product-sale-${Date.now()}-${index}`),
+      productId: String(sale?.productId || sale?.product_id || ""),
+      productName: String(sale?.productName || sale?.product_name || ""),
+      paymentId: String(sale?.paymentId || sale?.payment_id || ""),
+      quantity,
+      unitPrice,
+      totalAmount,
+      paymentMethod: String(sale?.paymentMethod || sale?.payment_method || "pix"),
+      notes: String(sale?.notes || ""),
+      createdAt: sale?.createdAt || sale?.created_at || new Date().toISOString()
+    };
+  }
+
+  function getProductSales() {
+    const raw = loadRaw(KEYS.productSales, []);
+    const items = Array.isArray(raw) ? raw.map(normalizeProductSale) : [];
+    return items.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function setProductSales(sales) {
+    save(KEYS.productSales, (Array.isArray(sales) ? sales : []).map(normalizeProductSale));
+  }
+
+  function upsertProductSale(sale) {
+    const normalized = normalizeProductSale(sale);
+    const sales = getProductSales();
+    const index = sales.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) sales[index] = normalized;
+    else sales.push(normalized);
+    setProductSales(sales);
+    return normalized;
+  }
+
+  function normalizeCashRegister(register, index = 0) {
+    const status = ["open", "closed"].includes(register?.status) ? register.status : "open";
+    return {
+      id: String(register?.id || `cash-${Date.now()}-${index}`),
+      date: String(register?.date || register?.registerDate || register?.register_date || todayISO()),
+      openingAmount: parsePrice(register?.openingAmount ?? register?.opening_amount ?? 0),
+      closingAmount: register?.closingAmount === null || register?.closing_amount === null ? null : parsePrice(register?.closingAmount ?? register?.closing_amount ?? 0),
+      expectedAmount: register?.expectedAmount === null || register?.expected_amount === null ? null : parsePrice(register?.expectedAmount ?? register?.expected_amount ?? 0),
+      status,
+      notes: String(register?.notes || ""),
+      openedAt: register?.openedAt || register?.opened_at || new Date().toISOString(),
+      closedAt: register?.closedAt || register?.closed_at || ""
+    };
+  }
+
+  function getCashRegisters(includeClosed = true) {
+    const raw = loadRaw(KEYS.cashRegisters, []);
+    const items = Array.isArray(raw) ? raw.map(normalizeCashRegister) : [];
+    return items
+      .filter(item => includeClosed || item.status === "open")
+      .sort((a, b) => String(b.date + b.openedAt).localeCompare(String(a.date + a.openedAt)));
+  }
+
+  function setCashRegisters(registers) {
+    save(KEYS.cashRegisters, (Array.isArray(registers) ? registers : []).map(normalizeCashRegister));
+  }
+
+  function upsertCashRegister(register) {
+    const normalized = normalizeCashRegister(register);
+    const registers = getCashRegisters(true);
+    const index = registers.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) registers[index] = normalized;
+    else registers.push(normalized);
+    setCashRegisters(registers);
+    return normalized;
+  }
+
+  function getOpenCashRegister(date = todayISO()) {
+    return getCashRegisters(true).find(item => item.date === date && item.status === "open") || null;
+  }
+
+  function normalizePayment(payment, index = 0) {
+    const grossAmount = parsePrice(payment?.grossAmount ?? payment?.gross_amount ?? payment?.amount ?? 0);
+    const discountAmount = parsePrice(payment?.discountAmount ?? payment?.discount_amount ?? 0);
+    const feeAmount = parsePrice(payment?.feeAmount ?? payment?.fee_amount ?? 0);
+    const netAmount = parsePrice(payment?.netAmount ?? payment?.net_amount ?? Math.max(0, grossAmount - discountAmount - feeAmount));
+    const status = ["pending", "paid", "cancelled", "refunded"].includes(payment?.status) ? payment.status : "paid";
+    return {
+      id: String(payment?.id || `payment-${Date.now()}-${index}`),
+      bookingId: String(payment?.bookingId || payment?.booking_id || ""),
+      clientId: String(payment?.clientId || payment?.client_id || ""),
+      barberId: String(payment?.barberId || payment?.barber_id || ""),
+      grossAmount,
+      discountAmount,
+      feeAmount,
+      netAmount,
+      method: String(payment?.method || payment?.paymentMethod || payment?.payment_method || "pix"),
+      status,
+      notes: String(payment?.notes || ""),
+      createdAt: payment?.createdAt || payment?.created_at || new Date().toISOString(),
+      updatedAt: payment?.updatedAt || payment?.updated_at || new Date().toISOString()
+    };
+  }
+
+  function getPayments(includeInactive = false) {
+    const raw = loadRaw(KEYS.payments, []);
+    const items = Array.isArray(raw) ? raw.map(normalizePayment) : [];
+    return items
+      .filter(item => includeInactive || item.status !== "cancelled")
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function setPayments(payments) {
+    save(KEYS.payments, (Array.isArray(payments) ? payments : []).map(normalizePayment));
+  }
+
+  function upsertPayment(payment) {
+    const normalized = normalizePayment({ ...payment, updatedAt: new Date().toISOString() });
+    const payments = getPayments(true);
+    const index = payments.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) payments[index] = normalized;
+    else payments.push(normalized);
+    setPayments(payments);
+    return normalized;
+  }
+
+  function normalizeCommission(commission, index = 0) {
+    const baseAmount = parsePrice(commission?.baseAmount ?? commission?.base_amount ?? 0);
+    const commissionPercent = Math.max(0, Number(commission?.commissionPercent ?? commission?.commission_percent ?? 0) || 0);
+    const commissionAmount = parsePrice(commission?.commissionAmount ?? commission?.commission_amount ?? (baseAmount * commissionPercent / 100));
+    const status = ["pending", "paid", "cancelled"].includes(commission?.status) ? commission.status : "pending";
+    return {
+      id: String(commission?.id || `commission-${Date.now()}-${index}`),
+      barberId: String(commission?.barberId || commission?.barber_id || ""),
+      barberName: String(commission?.barberName || commission?.barber_name || ""),
+      bookingId: String(commission?.bookingId || commission?.booking_id || ""),
+      paymentId: String(commission?.paymentId || commission?.payment_id || ""),
+      baseAmount,
+      commissionPercent,
+      commissionAmount,
+      status,
+      createdAt: commission?.createdAt || commission?.created_at || new Date().toISOString(),
+      updatedAt: commission?.updatedAt || commission?.updated_at || new Date().toISOString()
+    };
+  }
+
+  function getCommissions(includeInactive = false) {
+    const raw = loadRaw(KEYS.commissions, []);
+    const items = Array.isArray(raw) ? raw.map(normalizeCommission) : [];
+    return items
+      .filter(item => includeInactive || item.status !== "cancelled")
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function setCommissions(commissions) {
+    save(KEYS.commissions, (Array.isArray(commissions) ? commissions : []).map(normalizeCommission));
+  }
+
+  function upsertCommission(commission) {
+    const normalized = normalizeCommission({ ...commission, updatedAt: new Date().toISOString() });
+    const commissions = getCommissions(true);
+    const index = commissions.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) commissions[index] = normalized;
+    else commissions.push(normalized);
+    setCommissions(commissions);
+    return normalized;
+  }
+
+  function normalizeSettlement(settlement, index = 0) {
+    const grossAmount = parsePrice(settlement?.grossAmount ?? settlement?.gross_amount ?? 0);
+    const commissionAmount = parsePrice(settlement?.commissionAmount ?? settlement?.commission_amount ?? 0);
+    const paidAmount = parsePrice(settlement?.paidAmount ?? settlement?.paid_amount ?? commissionAmount);
+    const status = ["open", "closed", "paid"].includes(settlement?.status) ? settlement.status : "paid";
+    return {
+      id: String(settlement?.id || `settlement-${Date.now()}-${index}`),
+      barberId: String(settlement?.barberId || settlement?.barber_id || ""),
+      barberName: String(settlement?.barberName || settlement?.barber_name || ""),
+      periodStart: String(settlement?.periodStart || settlement?.period_start || ""),
+      periodEnd: String(settlement?.periodEnd || settlement?.period_end || ""),
+      grossAmount,
+      commissionAmount,
+      paidAmount,
+      status,
+      notes: String(settlement?.notes || ""),
+      createdAt: settlement?.createdAt || settlement?.created_at || new Date().toISOString(),
+      updatedAt: settlement?.updatedAt || settlement?.updated_at || new Date().toISOString()
+    };
+  }
+
+  function getSettlements(includeInactive = false) {
+    const raw = loadRaw(KEYS.settlements, []);
+    const items = Array.isArray(raw) ? raw.map(normalizeSettlement) : [];
+    return items
+      .filter(item => includeInactive || item.status !== "cancelled")
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function setSettlements(settlements) {
+    save(KEYS.settlements, (Array.isArray(settlements) ? settlements : []).map(normalizeSettlement));
+  }
+
+  function upsertSettlement(settlement) {
+    const normalized = normalizeSettlement({ ...settlement, updatedAt: new Date().toISOString() });
+    const settlements = getSettlements(true);
+    const index = settlements.findIndex(item => String(item.id) === String(normalized.id));
+    if (index >= 0) settlements[index] = normalized;
+    else settlements.push(normalized);
+    setSettlements(settlements);
+    return normalized;
   }
 
   function normalizePeriod(period) {
@@ -883,7 +1181,14 @@
       blocks: getBlocks(),
       portfolio: getPortfolio(true),
       testimonials: getTestimonials(true),
-      clients: getClients()
+      clients: getClients(),
+      products: getProducts(true),
+      payments: getPayments(true),
+      commissions: getCommissions(true),
+      settlements: getSettlements(true),
+      inventoryMovements: getInventoryMovements(),
+      productSales: getProductSales(),
+      cashRegisters: getCashRegisters(true)
     };
   }
 
@@ -897,6 +1202,13 @@
     if (Array.isArray(data.portfolio)) setPortfolio(data.portfolio);
     if (Array.isArray(data.testimonials)) setTestimonials(data.testimonials);
     if (Array.isArray(data.clients)) setClients(data.clients);
+    if (Array.isArray(data.products)) setProducts(data.products);
+    if (Array.isArray(data.payments)) setPayments(data.payments);
+    if (Array.isArray(data.commissions)) setCommissions(data.commissions);
+    if (Array.isArray(data.settlements)) setSettlements(data.settlements);
+    if (Array.isArray(data.inventoryMovements)) setInventoryMovements(data.inventoryMovements);
+    if (Array.isArray(data.productSales)) setProductSales(data.productSales);
+    if (Array.isArray(data.cashRegisters)) setCashRegisters(data.cashRegisters);
   }
 
   window.Legado = {
@@ -907,6 +1219,7 @@
     DEFAULT_PORTFOLIO,
     DEFAULT_TESTIMONIALS,
     DEFAULT_CLIENTS,
+    DEFAULT_PRODUCTS,
     ICONS,
     VALID_STATUSES,
     VALID_TESTIMONIAL_STATUSES,
@@ -936,6 +1249,35 @@
     setClients,
     upsertClient,
     saveClientProfile,
+    normalizeProduct,
+    getProducts,
+    setProducts,
+    upsertProduct,
+    normalizeInventoryMovement,
+    getInventoryMovements,
+    setInventoryMovements,
+    upsertInventoryMovement,
+    normalizeProductSale,
+    getProductSales,
+    setProductSales,
+    upsertProductSale,
+    normalizeCashRegister,
+    getCashRegisters,
+    setCashRegisters,
+    upsertCashRegister,
+    getOpenCashRegister,
+    normalizePayment,
+    getPayments,
+    setPayments,
+    upsertPayment,
+    normalizeCommission,
+    getCommissions,
+    setCommissions,
+    upsertCommission,
+    normalizeSettlement,
+    getSettlements,
+    setSettlements,
+    upsertSettlement,
     getAvailability,
     setAvailability,
     timeToMinutes,

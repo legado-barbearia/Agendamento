@@ -12,9 +12,26 @@
   calendarDate.setHours(12, 0, 0, 0);
   let calendarMode = "day";
   let currentPortfolioGallery = [];
+  let currentAdminProfile = null;
 
   function getCredentials() {
     return L.loadRaw(L.KEYS.credentials, null);
+  }
+
+  function isSupabaseAuthEnabled() {
+    return Boolean(window.LegadoSupabase?.signIn);
+  }
+
+  function isBarberMode() {
+    return String(currentAdminProfile?.role || "").toLowerCase() === "barber";
+  }
+
+  function barberAllowedPanels() {
+    return ["barbers"];
+  }
+
+  function canOpenPanel(name) {
+    return !isBarberMode() || barberAllowedPanels().includes(name);
   }
 
   async function hashPassword(value) {
@@ -78,11 +95,11 @@
     const credentials = getCredentials();
     const setup = $("#setupForm");
     const login = $("#loginForm");
-    if (credentials || window.LegadoSupabase?.signIn) {
+    if (credentials || isSupabaseAuthEnabled()) {
       setup.classList.add("hidden"); login.classList.remove("hidden");
       $("#authTitle").textContent = "Acesso administrativo";
-      $("#authDescription").textContent = window.LegadoSupabase?.signIn ? "Entre com o usuário criado no Supabase Auth." : "Entre para organizar a agenda da Legado Barbearia.";
-      $("#loginEmail").value = credentials?.email || "";
+      $("#authDescription").textContent = isSupabaseAuthEnabled() ? "Entre com o usuário criado no Supabase Auth e autorizado em profiles." : "Entre para organizar a agenda da Legado Barbearia.";
+      $("#loginEmail").value = isSupabaseAuthEnabled() ? "" : credentials?.email || "";
     } else {
       setup.classList.remove("hidden"); login.classList.add("hidden");
       $("#authTitle").textContent = "Primeiro acesso";
@@ -90,16 +107,50 @@
     }
   }
 
-  function showAdmin() {
+  function showAdmin(profile = null) {
+    currentAdminProfile = profile || null;
     authView.classList.add("hidden");
     adminView.classList.remove("hidden");
     $("#logoutButton").classList.remove("hidden");
-    $("#openAdminTutorial").classList.remove("hidden");
+    $("#openAdminTutorial").classList.toggle("hidden", isBarberMode());
     const credentials = getCredentials();
-    $("#adminNameLabel").textContent = credentials?.name || "Administrador";
+    $("#adminNameLabel").textContent = profile?.name || credentials?.name || "Administrador";
+    adminView.dataset.role = isBarberMode() ? "barber" : "admin";
+    const welcomeTitle = $(".admin-welcome h1");
+    const welcomeText = $(".admin-welcome p");
+    if (welcomeTitle) welcomeTitle.textContent = isBarberMode() ? "Minha área" : "Gestão da barbearia";
+    if (welcomeText) welcomeText.innerHTML = isBarberMode()
+      ? `Olá, <strong id="adminNameLabel">${L.escapeHTML(profile?.name || "Barbeiro")}</strong>. Sua agenda e seus repasses aparecem aqui.`
+      : `Olá, <strong id="adminNameLabel">${L.escapeHTML(profile?.name || credentials?.name || "Administrador")}</strong>. Tudo que precisa para organizar o dia está aqui.`;
+    $("#adminNameLabel").textContent = profile?.name || credentials?.name || "Administrador";
+    applyAccessMode();
     $("#todayLabel").textContent = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
     refreshAll();
-    if (localStorage.getItem("legadoAdminTutorialSeen") !== "1") openPanel("tutorial");
+    if (isBarberMode()) openPanel("barbers");
+    else if (localStorage.getItem("legadoAdminTutorialSeen") !== "1") openPanel("tutorial");
+  }
+
+  function applyAccessMode() {
+    const barber = isBarberMode();
+    document.body.classList.toggle("barber-mode", barber);
+    const allowed = barberAllowedPanels();
+    $$("[data-panel-target]").forEach(button => {
+      const visible = !barber || allowed.includes(button.dataset.panelTarget);
+      button.hidden = !visible;
+    });
+    $$("#adminPanelSelect option").forEach(option => {
+      const visible = !barber || allowed.includes(option.value);
+      option.hidden = !visible;
+      option.disabled = !visible;
+    });
+    $$("[data-open-panel]").forEach(button => {
+      const target = button.dataset.openPanel;
+      if (target) button.hidden = barber && !allowed.includes(target);
+    });
+    $$("[data-create-booking]").forEach(button => { button.hidden = barber; });
+    $("#openPendingBookings")?.toggleAttribute("hidden", barber);
+    $("#barberQuickForm")?.classList.toggle("hidden", barber);
+    $("#barbersAdminList")?.closest(".admin-card")?.classList.toggle("hidden", barber);
   }
 
   function logout() {
@@ -128,10 +179,16 @@
     const credentials = getCredentials();
     const email = $("#loginEmail").value.trim().toLowerCase();
     const password = $("#loginPassword").value;
-    if (window.LegadoSupabase?.signIn) {
-      showAuthMessage("Conectando ao Supabase...");
-      const remote = await window.LegadoSupabase.signIn(email, password);
-      if (remote.ok) { sessionStorage.setItem(L.KEYS.session, "active"); showAuthMessage(""); showAdmin(); return; }
+    if (isSupabaseAuthEnabled()) {
+      try {
+        showAuthMessage("Conectando ao Supabase...");
+        const remote = await window.LegadoSupabase.signIn(email, password);
+        if (remote.ok) { sessionStorage.setItem(L.KEYS.session, "active"); showAuthMessage(""); showAdmin(remote.profile); return; }
+        return showAuthMessage(remote.error || "Acesso recusado pelo Supabase.", true);
+      } catch (error) {
+        console.error("Erro no login Supabase:", error);
+        return showAuthMessage("Não foi possível validar o login no Supabase.", true);
+      }
     }
     const passwordHash = await hashPassword(password);
     if (!credentials || email !== String(credentials.email).toLowerCase() || passwordHash !== credentials.passwordHash) return showAuthMessage("E-mail ou senha incorretos.", true);
@@ -174,11 +231,15 @@
   }
 
   function openPanel(name) {
+    if (!canOpenPanel(name)) name = "barbers";
     $$(".admin-panel").forEach(panel => panel.classList.toggle("active", panel.dataset.panel === name));
     $$(".admin-nav-button[data-panel-target]").forEach(button => button.classList.toggle("active", button.dataset.panelTarget === name));
     const mobileSelect = $("#adminPanelSelect");
     if (mobileSelect) mobileSelect.value = name;
     if (name === "calendar") renderCalendar();
+    if (name === "financial") renderFinancial();
+    if (name === "barbers") renderBarbersAdmin();
+    if (name === "products") renderProducts();
     if (name === "reports") renderReports();
     if (name === "portfolio") renderPortfolioAdmin();
     if (name === "testimonials") renderTestimonialsAdmin();
@@ -301,6 +362,38 @@
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
   }
 
+  function paymentValue(id) {
+    return Math.max(0, Number($(id)?.value || 0) || 0);
+  }
+
+  function updatePaymentTotal() {
+    const gross = paymentValue("#paymentGross");
+    const discount = paymentValue("#paymentDiscount");
+    const fee = paymentValue("#paymentFee");
+    const net = Math.max(0, gross - discount - fee);
+    $("#paymentNetTotal").textContent = L.formatCurrency(net);
+    return net;
+  }
+
+  function closePaymentModal() {
+    $("#paymentModal").classList.remove("show");
+    $("#paymentModal").setAttribute("aria-hidden", "true");
+  }
+
+  function openPaymentModal(booking) {
+    $("#paymentBookingId").value = booking.id;
+    $("#paymentGross").value = Number(booking.priceValue || 0).toFixed(2);
+    $("#paymentDiscount").value = "0";
+    $("#paymentFee").value = "0";
+    $("#paymentMethod").value = "pix";
+    $("#paymentNotes").value = "";
+    $("#paymentSummary").innerHTML = `<strong>${L.escapeHTML(booking.name)}</strong><span>${L.escapeHTML(booking.service)} · ${L.formatDate(booking.date)} às ${booking.startTime}</span><span>${L.escapeHTML(booking.professional)}</span>`;
+    updatePaymentTotal();
+    $("#paymentModal").classList.add("show");
+    $("#paymentModal").setAttribute("aria-hidden", "false");
+    $("#paymentGross").focus();
+  }
+
   $("#bookingTable").addEventListener("click", event => {
     const row = event.target.closest("[data-booking-id]");
     const action = event.target.closest("[data-booking-action]")?.dataset.bookingAction;
@@ -310,6 +403,7 @@
     if (action === "edit") return openBookingEditor(booking.id);
     if (action === "whatsapp") return openBookingWhatsApp(booking);
     if (action === "reminder") return openBookingWhatsApp(booking, "reminder");
+    if (action === "completed") return openPaymentModal(booking);
     if (action === "delete") {
       if (!window.confirm(`Excluir definitivamente o agendamento de ${booking.name}?`)) return;
       L.deleteBooking(booking.id); showToast("Agendamento excluído."); return;
@@ -317,6 +411,46 @@
     if (action === "cancelled" && !window.confirm(`Desmarcar o agendamento de ${booking.name}? O horário voltará a ficar disponível.`)) return;
     L.upsertBooking({ ...booking, status: action, updatedAt: new Date().toISOString() });
     showToast(action === "cancelled" ? "Agendamento desmarcado. O horário foi liberado." : `Agendamento marcado como ${L.statusLabel(action).toLowerCase()}.`);
+  });
+
+  $$("#paymentGross, #paymentDiscount, #paymentFee").forEach(input => input.addEventListener("input", updatePaymentTotal));
+  $$("[data-close-payment-modal]").forEach(button => button.addEventListener("click", closePaymentModal));
+  $("#paymentForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const booking = L.getBookings().find(item => String(item.id) === String($("#paymentBookingId").value));
+    if (!booking) return showToast("Agendamento nÃ£o encontrado para finalizar.", true);
+    const gross = paymentValue("#paymentGross");
+    const discount = paymentValue("#paymentDiscount");
+    const fee = paymentValue("#paymentFee");
+    const net = Math.max(0, gross - discount - fee);
+    const method = $("#paymentMethod").value;
+    const status = method === "pendente" ? "pending" : "paid";
+    L.upsertPayment({
+      id: `payment-${booking.id}`,
+      bookingId: booking.id,
+      grossAmount: gross,
+      discountAmount: discount,
+      feeAmount: fee,
+      netAmount: net,
+      method,
+      status,
+      notes: $("#paymentNotes").value.trim()
+    });
+    const commissionPercent = barberCommissionPercent(booking.professional);
+    L.upsertCommission({
+      id: `commission-${booking.id}`,
+      bookingId: booking.id,
+      paymentId: `payment-${booking.id}`,
+      barberName: booking.professional,
+      baseAmount: net,
+      commissionPercent,
+      commissionAmount: net * commissionPercent / 100,
+      status: status === "paid" ? "pending" : "cancelled"
+    });
+    L.upsertBooking({ ...booking, priceValue: gross, status: "completed", updatedAt: new Date().toISOString() });
+    closePaymentModal();
+    refreshAll();
+    showToast(status === "pending" ? "Atendimento concluÃ­do com pagamento pendente." : "Atendimento concluÃ­do e pagamento registrado.");
   });
 
   function renderClients() {
@@ -944,21 +1078,712 @@
     const [start, end] = currentMonthRange(); if (!$("#reportStart").value) $("#reportStart").value = start; if (!$("#reportEnd").value) $("#reportEnd").value = end;
   }
   function reportBookings() { const start = $("#reportStart").value; const end = $("#reportEnd").value; return L.getBookings().filter(item => (!start || item.date >= start) && (!end || item.date <= end)); }
+  function isDateInReportRange(date) {
+    const start = $("#reportStart").value;
+    const end = $("#reportEnd").value;
+    return (!start || date >= start) && (!end || date <= end);
+  }
+  function entryDate(value) {
+    return String(value || "").slice(0, 10);
+  }
+  function addReportValue(target, label, value) {
+    const key = label || "Não informado";
+    target[key] = (target[key] || 0) + value;
+  }
   function renderBarReport(element, data, formatter = value => value) {
+    if (!element) return;
     const entries = Object.entries(data).sort((a, b) => b[1] - a[1]); const max = Math.max(1, ...entries.map(entry => entry[1]));
     element.innerHTML = entries.length ? entries.map(([label, value]) => `<div class="bar-item"><span title="${L.escapeHTML(label)}">${L.escapeHTML(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, value / max * 100)}%"></div></div><strong>${formatter(value)}</strong></div>`).join("") : '<div class="empty-admin"><strong>Sem dados</strong>Nenhum registro no período.</div>';
   }
   function renderReports() {
-    setReportDefaults(); const bookings = reportBookings(); const completed = bookings.filter(item => item.status === "completed"); const revenue = completed.reduce((sum, item) => sum + item.priceValue, 0); const cancelled = bookings.filter(item => ["cancelled", "no_show"].includes(item.status)).length;
-    $("#reportCompleted").textContent = completed.length; $("#reportRevenue").textContent = L.formatCurrency(revenue); $("#reportTicket").textContent = L.formatCurrency(completed.length ? revenue / completed.length : 0); $("#reportCancelled").textContent = cancelled;
+    setReportDefaults();
+    const bookings = reportBookings();
+    const bookingById = new Map(L.getBookings().map(item => [String(item.id), item]));
+    const completed = bookings.filter(item => item.status === "completed");
+    const bookingRevenue = completed.reduce((sum, item) => sum + item.priceValue, 0);
+    const cancelled = bookings.filter(item => ["cancelled", "no_show"].includes(item.status)).length;
+    const payments = (L.getPayments ? L.getPayments(true) : []).filter(item => item.status !== "cancelled" && isDateInReportRange(entryDate(item.createdAt)));
+    const paidPayments = payments.filter(item => item.status === "paid");
+    const pendingPayments = payments.filter(item => item.status === "pending");
+    const productSales = (L.getProductSales ? L.getProductSales(true) : []).filter(item => isDateInReportRange(entryDate(item.createdAt)));
+    const productPaymentIds = new Set(productSales.map(item => String(item.paymentId || "")));
+    const servicePayments = paidPayments.filter(item => item.bookingId && !productPaymentIds.has(String(item.id)));
+    const cashRegisters = (L.getCashRegisters ? L.getCashRegisters(true) : []).filter(item => isDateInReportRange(item.date));
+    const settlements = (L.getSettlements ? L.getSettlements(true) : []).filter(item => isDateInReportRange(entryDate(item.createdAt)));
+    const paidRevenue = paidPayments.reduce((sum, item) => sum + item.netAmount, 0);
+    const serviceRevenue = servicePayments.length ? servicePayments.reduce((sum, item) => sum + item.netAmount, 0) : bookingRevenue;
+    const productRevenue = productSales.reduce((sum, item) => sum + item.totalAmount, 0);
+    const pendingRevenue = pendingPayments.reduce((sum, item) => sum + item.netAmount, 0);
+    const settlementPaid = settlements.reduce((sum, item) => sum + item.paidAmount, 0);
+    const revenue = paidPayments.length ? paidRevenue : bookingRevenue;
+    $("#reportCompleted").textContent = completed.length; $("#reportRevenue").textContent = L.formatCurrency(revenue); $("#reportTicket").textContent = L.formatCurrency(paidPayments.length ? revenue / paidPayments.length : completed.length ? bookingRevenue / completed.length : 0); $("#reportCancelled").textContent = cancelled;
+    if ($("#reportServiceRevenue")) $("#reportServiceRevenue").textContent = L.formatCurrency(serviceRevenue);
+    if ($("#reportProductRevenue")) $("#reportProductRevenue").textContent = L.formatCurrency(productRevenue);
+    if ($("#reportPendingRevenue")) $("#reportPendingRevenue").textContent = L.formatCurrency(pendingRevenue);
+    if ($("#reportSettlementPaid")) $("#reportSettlementPaid").textContent = L.formatCurrency(settlementPaid);
     const serviceData = {}; completed.forEach(item => serviceData[item.service] = (serviceData[item.service] || 0) + 1);
     const timeData = {}; bookings.filter(item => item.status !== "cancelled").forEach(item => timeData[item.startTime] = (timeData[item.startTime] || 0) + 1);
     const weekdayData = {}; bookings.filter(item => item.status !== "cancelled").forEach(item => { const label = dayNames[L.parseISODate(item.date).getDay()]; weekdayData[label] = (weekdayData[label] || 0) + 1; });
     const statusData = {}; bookings.forEach(item => { const label = L.statusLabel(item.status); statusData[label] = (statusData[label] || 0) + 1; });
+    const paymentData = {}; paidPayments.forEach(item => addReportValue(paymentData, item.method, item.netAmount));
+    const productData = {}; productSales.forEach(item => addReportValue(productData, item.productName, item.totalAmount));
+    const cashData = {}; cashRegisters.forEach(item => addReportValue(cashData, item.status === "open" ? "Caixas abertos" : "Caixas fechados", 1));
+    const settlementData = {}; settlements.forEach(item => {
+      const name = item.barberName || bookingById.get(String(item.bookingId))?.professional || "Profissional";
+      addReportValue(settlementData, name, item.paidAmount);
+    });
     renderBarReport($("#servicesReport"), serviceData); renderBarReport($("#timesReport"), timeData); renderBarReport($("#weekdaysReport"), weekdayData); renderBarReport($("#statusReport"), statusData);
+    renderBarReport($("#paymentsReport"), paymentData, L.formatCurrency); renderBarReport($("#productsReport"), productData, L.formatCurrency); renderBarReport($("#cashReport"), cashData); renderBarReport($("#settlementsReport"), settlementData, L.formatCurrency);
   }
   $("#applyReport").addEventListener("click", renderReports);
   $("#exportReport").addEventListener("click", () => L.exportBookingsCSV(reportBookings()));
+
+  function barberCommissionPercent(name) {
+    const settings = L.getSettings();
+    const commissions = settings.barberCommissions || {};
+    return Math.max(0, Number(commissions[name] ?? commissions[L.slugify(name)] ?? 0) || 0);
+  }
+
+  function completedBookingsInCurrentMonth() {
+    const [monthStart, monthEnd] = currentMonthRange();
+    return L.getBookings().filter(item => item.status === "completed" && item.date >= monthStart && item.date <= monthEnd);
+  }
+
+  function pendingCommissionGroups() {
+    const bookingById = new Map(L.getBookings().map(item => [String(item.id), item]));
+    const groups = {};
+    (L.getCommissions ? L.getCommissions() : []).filter(item => item.status === "pending").forEach(item => {
+      const booking = bookingById.get(String(item.bookingId));
+      const name = item.barberName || booking?.professional || "Sem profissional";
+      if (!groups[name]) groups[name] = { amount: 0, gross: 0, count: 0, items: [] };
+      groups[name].amount += item.commissionAmount;
+      groups[name].gross += item.baseAmount;
+      groups[name].count += 1;
+      groups[name].items.push(item);
+    });
+    return groups;
+  }
+
+  function payBarberSettlement(name) {
+    const groups = pendingCommissionGroups();
+    const group = groups[name];
+    if (!group?.items?.length) return showToast("Esse barbeiro não possui comissão pendente.", true);
+    if (!window.confirm(`Registrar pagamento de ${L.formatCurrency(group.amount)} para ${name}?`)) return;
+    const [periodStart, periodEnd] = currentMonthRange();
+    const now = new Date().toISOString();
+    const settlement = L.upsertSettlement({
+      id: `settlement-${L.slugify(name)}-${Date.now()}`,
+      barberName: name,
+      periodStart,
+      periodEnd,
+      grossAmount: group.gross,
+      commissionAmount: group.amount,
+      paidAmount: group.amount,
+      status: "paid",
+      notes: `${group.count} comissão(ões) quitada(s) em ${L.formatDate(L.todayISO())}.`,
+      createdAt: now
+    });
+    group.items.forEach(item => L.upsertCommission({ ...item, status: "paid", updatedAt: now }));
+    refreshAll();
+    showToast(`Repasse de ${L.escapeHTML(name)} registrado: ${L.formatCurrency(settlement.paidAmount)}.`);
+  }
+
+  function barberNames() {
+    const settings = L.getSettings();
+    if (isBarberMode() && currentAdminProfile?.name) return [currentAdminProfile.name];
+    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    return [...new Set(names.map(item => String(item || "").trim()).filter(Boolean))];
+  }
+
+  function selectedBarberName() {
+    const names = barberNames();
+    const select = $("#barberDashboardSelect");
+    if (!select) return names[0] || "";
+    const profileName = String(currentAdminProfile?.name || "").trim().toLowerCase();
+    const profileMatch = names.find(name => name.toLowerCase() === profileName);
+    if (!select.value) select.value = profileMatch || names[0] || "";
+    if (!names.includes(select.value)) select.value = profileMatch || names[0] || "";
+    return select.value;
+  }
+
+  function renderBarberDashboard() {
+    const select = $("#barberDashboardSelect");
+    if (!select) return;
+    const names = barberNames();
+    const previous = select.value;
+    select.innerHTML = names.map(name => `<option value="${L.escapeHTML(name)}">${L.escapeHTML(name)}</option>`).join("");
+    select.disabled = isBarberMode();
+    if (previous && names.includes(previous)) select.value = previous;
+    const name = selectedBarberName();
+    const normalizedName = name.trim().toLowerCase();
+    const today = L.todayISO();
+    const [monthStart, monthEnd] = currentMonthRange();
+    const ownBookings = L.getBookings().filter(item => String(item.professional || "").trim().toLowerCase() === normalizedName);
+    const todayBookings = ownBookings.filter(item => item.date === today && !["cancelled", "no_show"].includes(item.status)).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const completedMonth = ownBookings.filter(item => item.status === "completed" && item.date >= monthStart && item.date <= monthEnd);
+    const revenue = completedMonth.reduce((sum, item) => sum + item.priceValue, 0);
+    const groups = pendingCommissionGroups();
+    const pendingGroup = groups[name] || { amount: 0, count: 0, gross: 0 };
+    $("#barberDashToday").textContent = todayBookings.length;
+    $("#barberDashCompleted").textContent = completedMonth.length;
+    $("#barberDashRevenue").textContent = L.formatCurrency(revenue);
+    $("#barberDashCommission").textContent = L.formatCurrency(pendingGroup.amount || 0);
+    $("#barberDashboardAgenda").innerHTML = todayBookings.length ? todayBookings.map(item => `
+      <article class="management-item">
+        <div><strong>${item.startTime} · ${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)} · ${L.statusLabel(item.status)}</small></div>
+        <button class="icon-action" type="button" data-edit-booking="${L.escapeHTML(item.id)}">Abrir</button>
+      </article>`).join("") : '<div class="empty-admin"><strong>Agenda livre hoje</strong>Nenhum horário reservado para este barbeiro.</div>';
+    const financeRows = [
+      `<article class="management-item"><div><strong>Faturamento do mês</strong><small>${completedMonth.length} atendimento(s) concluído(s)</small></div><strong class="money-stat">${L.formatCurrency(revenue)}</strong></article>`,
+      `<article class="management-item"><div><strong>Comissão configurada</strong><small>Percentual sobre serviços</small></div><strong>${barberCommissionPercent(name)}%</strong></article>`,
+      `<article class="management-item"><div><strong>Repasse pendente</strong><small>${pendingGroup.count || 0} comissão(ões) aguardando pagamento</small></div><strong class="money-stat">${L.formatCurrency(pendingGroup.amount || 0)}</strong></article>`
+    ];
+    $("#barberDashboardFinance").innerHTML = financeRows.join("");
+  }
+
+  function paidAmountOnDate(date) {
+    return (L.getPayments ? L.getPayments() : [])
+      .filter(item => item.status === "paid" && String(item.createdAt || "").slice(0, 10) === date)
+      .reduce((sum, item) => sum + item.netAmount, 0);
+  }
+
+  function renderCashRegister(todayRevenue = 0) {
+    const today = L.todayISO();
+    const open = L.getOpenCashRegister ? L.getOpenCashRegister(today) : null;
+    const lastToday = (L.getCashRegisters ? L.getCashRegisters(true) : []).find(item => item.date === today);
+    const current = open || lastToday || null;
+    const opening = current?.openingAmount || 0;
+    const received = todayRevenue || paidAmountOnDate(today);
+    const expected = opening + received;
+    $("#cashRegisterTitle").textContent = open ? "Caixa aberto" : current?.status === "closed" ? "Caixa fechado" : "Caixa não aberto";
+    $("#cashRegisterStatus").textContent = open ? "Aberto" : "Fechado";
+    $("#cashRegisterStatus").className = `status-badge status-${open ? "confirmed" : "cancelled"}`;
+    $("#cashOpeningAmount").textContent = L.formatCurrency(opening);
+    $("#cashExpectedAmount").textContent = L.formatCurrency(received);
+    $("#cashTotalExpected").textContent = L.formatCurrency(expected);
+    $("#openCashRegister").disabled = Boolean(open);
+    $("#closeCashRegister").disabled = !open;
+  }
+
+  function openCashRegister() {
+    if (L.getOpenCashRegister?.()) return showToast("Já existe um caixa aberto hoje.", true);
+    const raw = window.prompt("Valor inicial em dinheiro no caixa:", "0");
+    if (raw === null) return;
+    const openingAmount = L.parsePrice(raw);
+    L.upsertCashRegister({
+      id: `cash-${L.todayISO()}-${Date.now()}`,
+      date: L.todayISO(),
+      openingAmount,
+      status: "open",
+      notes: "Caixa aberto pelo painel administrativo."
+    });
+    renderFinancial();
+    showToast("Caixa aberto.");
+  }
+
+  function closeCashRegister() {
+    const cash = L.getOpenCashRegister?.();
+    if (!cash) return showToast("Não há caixa aberto para fechar.", true);
+    const received = paidAmountOnDate(cash.date);
+    const expected = cash.openingAmount + received;
+    const raw = window.prompt(`Valor contado no fechamento. Esperado: ${L.formatCurrency(expected)}`, expected.toFixed(2));
+    if (raw === null) return;
+    const closingAmount = L.parsePrice(raw);
+    L.upsertCashRegister({
+      ...cash,
+      closingAmount,
+      expectedAmount: expected,
+      status: "closed",
+      closedAt: new Date().toISOString(),
+      notes: `Fechado pelo painel. Diferença: ${L.formatCurrency(closingAmount - expected)}.`
+    });
+    renderFinancial();
+    showToast("Caixa fechado e salvo.");
+  }
+
+  function renderFinancial() {
+    const today = L.todayISO();
+    const [monthStart, monthEnd] = currentMonthRange();
+    const bookingById = new Map(L.getBookings().map(item => [String(item.id), item]));
+    const payments = L.getPayments ? L.getPayments().filter(item => item.status !== "cancelled") : [];
+    const paidPayments = payments.filter(item => item.status === "paid");
+    const commissions = L.getCommissions ? L.getCommissions().filter(item => item.status === "pending") : [];
+    const paymentDate = payment => bookingById.get(String(payment.bookingId))?.date || String(payment.createdAt || "").slice(0, 10);
+    const completedToday = L.getBookings().filter(item => item.status === "completed" && item.date === today);
+    const completedMonth = completedBookingsInCurrentMonth();
+    const todayRevenue = paidPayments.length ? paidPayments.filter(item => paymentDate(item) === today).reduce((sum, item) => sum + item.netAmount, 0) : completedToday.reduce((sum, item) => sum + item.priceValue, 0);
+    const monthPayments = paidPayments.filter(item => {
+      const date = paymentDate(item);
+      return date >= monthStart && date <= monthEnd;
+    });
+    const monthRevenue = monthPayments.length ? monthPayments.reduce((sum, item) => sum + item.netAmount, 0) : completedMonth.reduce((sum, item) => sum + item.priceValue, 0);
+    const monthCommissions = commissions.filter(item => {
+      const booking = bookingById.get(String(item.bookingId));
+      const date = booking?.date || String(item.createdAt || "").slice(0, 10);
+      return date >= monthStart && date <= monthEnd;
+    });
+    const monthCommission = monthCommissions.length
+      ? monthCommissions.reduce((sum, item) => sum + item.commissionAmount, 0)
+      : monthPayments.length
+      ? monthPayments.reduce((sum, payment) => {
+        const booking = bookingById.get(String(payment.bookingId));
+        return sum + payment.netAmount * barberCommissionPercent(booking?.professional || "") / 100;
+      }, 0)
+      : completedMonth.reduce((sum, item) => sum + item.priceValue * barberCommissionPercent(item.professional) / 100, 0);
+    $("#financeTodayRevenue").textContent = L.formatCurrency(todayRevenue);
+    $("#financeMonthRevenue").textContent = L.formatCurrency(monthRevenue);
+    $("#financeMonthCommission").textContent = L.formatCurrency(monthCommission);
+    $("#financeAverageTicket").textContent = L.formatCurrency((monthPayments.length || completedMonth.length) ? monthRevenue / (monthPayments.length || completedMonth.length) : 0);
+    renderCashRegister(todayRevenue);
+    const byBarber = {};
+    if (monthCommissions.length) monthCommissions.forEach(commission => {
+      const booking = bookingById.get(String(commission.bookingId));
+      const name = commission.barberName || booking?.professional || "Sem profissional";
+      byBarber[name] = (byBarber[name] || 0) + commission.commissionAmount;
+    });
+    else if (monthPayments.length) monthPayments.forEach(payment => {
+      const booking = bookingById.get(String(payment.bookingId));
+      const name = booking?.professional || (/venda de produto/i.test(payment.notes || "") ? "Produtos" : "Sem profissional");
+      byBarber[name] = (byBarber[name] || 0) + payment.netAmount;
+    });
+    else completedMonth.forEach(item => {
+      const name = item.professional || "Sem profissional";
+      byBarber[name] = (byBarber[name] || 0) + item.priceValue;
+    });
+    renderBarReport($("#financeBarberReport"), byBarber, value => L.formatCurrency(value));
+    {
+      const groups = pendingCommissionGroups();
+      const names = Object.keys(groups).sort((a, b) => groups[b].amount - groups[a].amount);
+      if (names.length) {
+        $("#financeBarberReport").innerHTML = names.map(name => `
+          <article class="management-item settlement-row" data-settlement-barber="${L.escapeHTML(name)}">
+            <div><strong>${L.escapeHTML(name)}</strong><small>${groups[name].count} comissão(ões) pendente(s) · base ${L.formatCurrency(groups[name].gross)}</small></div>
+            <strong class="money-stat">${L.formatCurrency(groups[name].amount)}</strong>
+            <button class="button button-small" type="button" data-pay-settlement="${L.escapeHTML(name)}">Pagar repasse</button>
+          </article>`).join("");
+      }
+    }
+    const pending = L.getBookings().filter(item => ["pending", "confirmed"].includes(item.status)).sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).slice(0, 6);
+    $("#financePendingList").innerHTML = pending.length ? pending.map(item => `
+      <article class="management-item">
+        <div><strong>${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)} · ${L.escapeHTML(L.formatDate(item.date))} ${item.startTime}</small></div>
+        <span class="status-badge status-${item.status}">${L.statusLabel(item.status)}</span>
+      </article>`).join("") : '<div class="empty-admin"><strong>Nenhuma pendência</strong>Não há horários agendados aguardando atendimento.</div>';
+    {
+      const pendingBookings = L.getBookings().filter(item => ["pending", "confirmed"].includes(item.status)).sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).slice(0, 4);
+      const pendingPayments = payments.filter(item => item.status === "pending").slice(0, 3);
+      const pendingCommissions = commissions.slice(0, 4);
+      const pendingCards = [
+        ...pendingPayments.map(item => {
+          const booking = bookingById.get(String(item.bookingId));
+          return `<article class="management-item"><div><strong>Pagamento pendente</strong><small>${L.escapeHTML(booking?.name || "Cliente")} · ${L.formatCurrency(item.netAmount)}</small></div><span class="status-badge status-pending">Pendente</span></article>`;
+        }),
+        ...pendingCommissions.map(item => {
+          const booking = bookingById.get(String(item.bookingId));
+          const name = item.barberName || booking?.professional || "Barbeiro";
+          return `<article class="management-item"><div><strong>Comissão pendente</strong><small>${L.escapeHTML(name)} · ${L.formatCurrency(item.commissionAmount)}</small></div><span class="status-badge status-confirmed">Repasse</span></article>`;
+        }),
+        ...pendingBookings.map(item => `<article class="management-item"><div><strong>${L.escapeHTML(item.name)}</strong><small>${L.escapeHTML(item.service)} · ${L.escapeHTML(L.formatDate(item.date))} ${item.startTime}</small></div><span class="status-badge status-${item.status}">${L.statusLabel(item.status)}</span></article>`)
+      ];
+      $("#financePendingList").innerHTML = pendingCards.length ? pendingCards.join("") : '<div class="empty-admin"><strong>Nenhuma pendência</strong>Não há pagamentos, comissões ou horários aguardando ação.</div>';
+    }
+  }
+
+  function renderBarbersAdmin() {
+    const settings = L.getSettings();
+    const names = Array.isArray(settings.barbers) && settings.barbers.length ? settings.barbers : [settings.professional];
+    $("#barbersCount").textContent = names.length;
+    const completedMonth = completedBookingsInCurrentMonth();
+    $("#barbersAdminList").innerHTML = names.map(name => {
+      const photo = settings.barberPhotos?.[name] || "";
+      const profile = settings.barberProfiles?.[name] || {};
+      const initials = String(name || "LG").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "LG";
+      const ownBookings = completedMonth.filter(item => String(item.professional).trim().toLowerCase() === String(name).trim().toLowerCase());
+      const revenue = ownBookings.reduce((sum, item) => sum + item.priceValue, 0);
+      const commission = barberCommissionPercent(name);
+      return `
+        <article class="management-item barber-admin-row ${profile.active === false ? "inactive" : ""}" data-barber-admin-name="${L.escapeHTML(name)}">
+          <div class="barber-photo-preview">${photo ? `<img src="${L.escapeHTML(photo)}" alt="${L.escapeHTML(name)}" />` : `<span>${L.escapeHTML(initials)}</span>`}</div>
+          <div><strong>${L.escapeHTML(name)}</strong><small>${ownBookings.length} atendimento(s) concluído(s) no mês · ${L.formatCurrency(revenue)}</small><p>${L.escapeHTML(profile.bio || profile.email || profile.phone || "Sem resumo profissional cadastrado.")}</p><div class="item-meta">${profile.active === false ? "Inativo no site" : "Ativo para agendamento"}${profile.phone ? ` · ${L.escapeHTML(L.formatPhone(profile.phone))}` : ""}${profile.email ? ` · ${L.escapeHTML(profile.email)}` : ""}</div></div>
+          <label class="inline-number-label"><span>Comissão %</span><input type="number" min="0" max="100" step="0.5" value="${commission}" data-barber-commission-input="${L.escapeHTML(name)}" /></label>
+          <div class="barber-row-actions"><strong class="money-stat">${L.formatCurrency(revenue * commission / 100)}</strong><button class="icon-action confirm-action" type="button" data-edit-barber="${L.escapeHTML(name)}">Editar</button><button class="icon-action" type="button" data-toggle-barber="${L.escapeHTML(name)}">${profile.active === false ? "Ativar" : "Ocultar"}</button><button class="icon-action" type="button" data-create-barber-access="${L.escapeHTML(name)}" ${profile.email ? "" : "disabled"}>${profile.email ? "Criar acesso" : "Sem e-mail"}</button><button class="icon-action" type="button" data-reset-barber-password="${L.escapeHTML(name)}">Redefinir senha</button></div>
+        </article>`;
+    }).join("");
+    renderBarberDashboard();
+  }
+
+  function remapBarberKey(map, oldName, newName) {
+    const next = { ...(map || {}) };
+    if (!oldName || oldName === newName || !Object.prototype.hasOwnProperty.call(next, oldName)) return next;
+    const oldValue = next[oldName];
+    const newValue = next[newName];
+    next[newName] = oldValue && typeof oldValue === "object" && !Array.isArray(oldValue)
+      ? { ...oldValue, ...(newValue && typeof newValue === "object" ? newValue : {}) }
+      : (newValue ?? oldValue);
+    delete next[oldName];
+    return next;
+  }
+
+  function resetBarberQuickForm() {
+    $("#barberQuickForm")?.reset();
+    $("#barberQuickOriginalName").value = "";
+    $("#barberQuickCommission").value = "40";
+    $("#barberQuickActive").checked = true;
+    $("#barberQuickFormTitle").textContent = "Adicionar barbeiro";
+    $("#barberQuickSubmit").textContent = "Salvar barbeiro";
+    $("#cancelBarberEdit").classList.add("hidden");
+  }
+
+  function editBarberQuickForm(name) {
+    const settings = L.getSettings();
+    const profile = settings.barberProfiles?.[name] || {};
+    $("#barberQuickOriginalName").value = name;
+    $("#barberQuickName").value = name;
+    $("#barberQuickPhone").value = profile.phone || "";
+    $("#barberQuickEmail").value = profile.email || "";
+    $("#barberQuickBio").value = profile.bio || "";
+    $("#barberQuickCommission").value = barberCommissionPercent(name);
+    $("#barberQuickActive").checked = profile.active !== false;
+    $("#barberQuickFormTitle").textContent = "Editar barbeiro";
+    $("#barberQuickSubmit").textContent = "Atualizar barbeiro";
+    $("#cancelBarberEdit").classList.remove("hidden");
+    $("#barberQuickName").focus();
+  }
+
+  function toggleBarberVisibility(name) {
+    const settings = L.getSettings();
+    const profile = settings.barberProfiles?.[name] || {};
+    const active = profile.active === false;
+    L.setSettings({
+      barberProfiles: {
+        ...(settings.barberProfiles || {}),
+        [name]: { ...profile, active, showOnSite: active, updatedAt: new Date().toISOString() }
+      }
+    });
+    renderBarbersAdmin();
+    refreshBarberOptions();
+    showToast(active ? "Barbeiro ativado para novos agendamentos." : "Barbeiro ocultado da agenda pública.");
+  }
+
+  async function manageBarberAccess(name, action = "create") {
+    const settings = L.getSettings();
+    const profile = settings.barberProfiles?.[name] || {};
+    if (!window.LegadoSupabase?.createBarberAccess) return showToast("Publique a Edge Function manage-barber-access antes de criar acessos.", true);
+    if (action === "create" && !profile.email) return showToast("Cadastre o e-mail do barbeiro antes de criar o acesso.", true);
+    const password = window.prompt(action === "reset-password" ? `Nova senha temporária para ${name}:` : `Senha inicial para ${name}. O barbeiro pode trocar depois no Supabase Auth:`);
+    if (password === null) return;
+    if (password.length < 6) return showToast("A senha precisa ter no mínimo 6 caracteres.", true);
+    try {
+      showToast(action === "reset-password" ? "Redefinindo senha do barbeiro..." : "Criando acesso do barbeiro...");
+      const result = await window.LegadoSupabase.createBarberAccess({
+        action,
+        displayName: name,
+        email: profile.email,
+        password,
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        serviceCommission: barberCommissionPercent(name),
+        productCommission: Number(profile.productCommission || 0),
+        active: profile.active !== false,
+        showOnSite: profile.showOnSite !== false
+      });
+      showToast(action === "reset-password" ? "Senha temporária atualizada." : result?.email ? `Acesso criado para ${result.email}.` : "Acesso do barbeiro criado.");
+    } catch (error) {
+      console.error("Erro ao criar acesso do barbeiro:", error);
+      showToast(error.message || "Não foi possível concluir a ação de acesso.", true);
+    }
+  }
+
+  function resetProductForm() {
+    $("#productForm").reset();
+    $("#productId").value = "";
+    $("#productActive").checked = true;
+    $("#productFormTitle").textContent = "Novo produto";
+    $("#cancelProductEdit").classList.add("hidden");
+  }
+
+  function renderProducts() {
+    const products = L.getProducts(true);
+    $("#productsCount").textContent = products.length;
+    $("#productsList").innerHTML = products.length ? products.map(product => {
+      const low = product.minStock > 0 && product.quantity <= product.minStock;
+      return `
+        <article class="management-item ${product.active ? "" : "inactive"} ${low ? "stock-low" : ""}" data-product-id="${L.escapeHTML(product.id)}">
+          <div><strong>${L.escapeHTML(product.name)}</strong><small>${L.escapeHTML(product.category)} · estoque ${product.quantity}${low ? " · estoque baixo" : ""}</small></div>
+          <strong class="money-stat">${L.formatCurrency(product.price)}</strong>
+          <div class="management-actions"><button class="icon-action confirm-action" data-product-action="sale" type="button">Venda</button><button class="icon-action" data-product-action="entry" type="button">Entrada</button><button class="icon-action" data-product-action="edit" type="button">Editar</button><button class="icon-action" data-product-action="toggle" type="button">${product.active ? "Desativar" : "Ativar"}</button><button class="icon-action danger" data-product-action="delete" type="button">Excluir</button></div>
+        </article>`;
+    }).join("") : '<div class="empty-admin"><strong>Nenhum produto cadastrado</strong>Cadastre produtos para preparar estoque e vendas.</div>';
+    const sales = L.getProductSales ? L.getProductSales().slice(0, 8) : [];
+    if ($("#productSalesCount")) $("#productSalesCount").textContent = sales.length;
+    if ($("#productSalesList")) $("#productSalesList").innerHTML = sales.length ? sales.map(sale => `
+      <article class="management-item">
+        <div><strong>${L.escapeHTML(sale.productName || "Produto")}</strong><small>${sale.quantity} un. · ${L.escapeHTML(sale.paymentMethod)} · ${new Date(sale.createdAt).toLocaleDateString("pt-BR")}</small></div>
+        <strong class="money-stat">${L.formatCurrency(sale.totalAmount)}</strong>
+      </article>`).join("") : '<div class="empty-admin"><strong>Sem vendas registradas</strong>As vendas de produto aparecerão aqui.</div>';
+  }
+
+  function stockQuantityValue() {
+    return Math.max(1, Number($("#stockQuantity")?.value || 1) || 1);
+  }
+
+  function stockDelta(type, quantity, current) {
+    if (type === "entrada") return quantity;
+    if (type === "ajuste") return quantity - current;
+    return -quantity;
+  }
+
+  function updateStockPreview() {
+    const product = L.getProducts(true).find(item => String(item.id) === String($("#stockProductId").value));
+    if (!product) return;
+    const type = $("#stockType").value;
+    const quantity = stockQuantityValue();
+    const next = Math.max(0, product.quantity + stockDelta(type, quantity, product.quantity));
+    $("#stockPreview").textContent = String(next);
+    $("#stockSaleTotal").textContent = L.formatCurrency(type === "venda" ? product.price * quantity : 0);
+    $("#stockPaymentMethod").closest("label").classList.toggle("hidden", type !== "venda");
+    $(".stock-sale-total").classList.toggle("hidden", type !== "venda");
+  }
+
+  function closeStockModal() {
+    $("#stockModal").classList.remove("show");
+    $("#stockModal").setAttribute("aria-hidden", "true");
+  }
+
+  function openStockModal(product, type = "venda") {
+    $("#stockProductId").value = product.id;
+    $("#stockType").value = type;
+    $("#stockPaymentMethod").value = "pix";
+    $("#stockQuantity").value = "1";
+    $("#stockReason").value = type === "entrada" ? "Entrada de estoque" : type === "venda" ? "Venda no balcão" : "";
+    $("#stockSummary").innerHTML = `<strong>${L.escapeHTML(product.name)}</strong><span>Estoque atual: ${product.quantity} · preço ${L.formatCurrency(product.price)}</span><span>${L.escapeHTML(product.category)}</span>`;
+    updateStockPreview();
+    $("#stockModal").classList.add("show");
+    $("#stockModal").setAttribute("aria-hidden", "false");
+    $("#stockQuantity").focus();
+  }
+
+  $("#barberQuickForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const originalName = $("#barberQuickOriginalName").value.trim();
+    const name = $("#barberQuickName").value.trim();
+    const phone = L.formatPhone($("#barberQuickPhone").value);
+    const email = $("#barberQuickEmail").value.trim().toLowerCase();
+    const bio = $("#barberQuickBio").value.trim();
+    const active = $("#barberQuickActive").checked;
+    const commission = Math.max(0, Math.min(100, Number($("#barberQuickCommission").value) || 0));
+    if (name.length < 2) return showToast("Informe o nome do barbeiro.", true);
+    if (email && !email.includes("@")) return showToast("Informe um e-mail valido ou deixe em branco.", true);
+    const settings = L.getSettings();
+    const duplicate = (settings.barbers || []).some(item => String(item).trim().toLowerCase() === name.toLowerCase() && String(item).trim().toLowerCase() !== originalName.toLowerCase());
+    if (duplicate) return showToast("Ja existe um barbeiro com esse nome.", true);
+    const listedBarbers = (settings.barbers || []).map(item => String(item).trim()).filter(Boolean).map(item => item === originalName ? name : item);
+    const barbers = parseBarbers([...listedBarbers, name].join("\n"), settings.professional || name);
+    const barberCommissions = remapBarberKey(settings.barberCommissions, originalName, name);
+    const barberProfiles = remapBarberKey(settings.barberProfiles, originalName, name);
+    const barberPhotos = remapBarberKey(settings.barberPhotos, originalName, name);
+    L.setSettings({
+      barbers,
+      professional: settings.professional === originalName ? name : settings.professional,
+      barberCommissions: { ...barberCommissions, [name]: commission },
+      barberProfiles: {
+        ...barberProfiles,
+        [name]: { ...(barberProfiles?.[name] || {}), phone, email, bio, active, showOnSite: active, updatedAt: new Date().toISOString() }
+      },
+      barberPhotos
+    });
+    if (originalName && originalName !== name) {
+      const bookings = L.getBookings().map(booking => String(booking.professional || "").trim().toLowerCase() === originalName.toLowerCase()
+        ? { ...booking, professional: name, updatedAt: new Date().toISOString() }
+        : booking);
+      L.setBookings(bookings);
+    }
+    resetBarberQuickForm();
+    loadSettingsForms();
+    renderBarbersAdmin();
+    renderFinancial();
+    showToast(originalName ? "Barbeiro atualizado." : "Barbeiro adicionado a agenda.");
+  });
+
+  $("#barberQuickForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = $("#barberQuickName").value.trim();
+    const phone = L.formatPhone($("#barberQuickPhone").value);
+    const email = $("#barberQuickEmail").value.trim().toLowerCase();
+    const bio = $("#barberQuickBio").value.trim();
+    const active = $("#barberQuickActive").checked;
+    const commission = Math.max(0, Math.min(100, Number($("#barberQuickCommission").value) || 0));
+    if (name.length < 2) return showToast("Informe o nome do barbeiro.", true);
+    if (email && !email.includes("@")) return showToast("Informe um e-mail válido ou deixe em branco.", true);
+    const settings = L.getSettings();
+    const barbers = parseBarbers([...(settings.barbers || []), name].join("\n"), settings.professional || name);
+    L.setSettings({
+      barbers,
+      barberCommissions: { ...(settings.barberCommissions || {}), [name]: commission },
+      barberProfiles: {
+        ...(settings.barberProfiles || {}),
+        [name]: { ...(settings.barberProfiles?.[name] || {}), phone, email, bio, active, showOnSite: active, updatedAt: new Date().toISOString() }
+      }
+    });
+    $("#barberQuickForm").reset();
+    $("#barberQuickCommission").value = "40";
+    $("#barberQuickActive").checked = true;
+    loadSettingsForms();
+    renderBarbersAdmin();
+    renderFinancial();
+    showToast("Barbeiro adicionado à agenda.");
+  });
+
+  $("#barbersAdminList")?.addEventListener("change", event => {
+    const input = event.target.closest("[data-barber-commission-input]");
+    if (!input) return;
+    const name = input.dataset.barberCommissionInput;
+    const settings = L.getSettings();
+    L.setSettings({ barberCommissions: { ...(settings.barberCommissions || {}), [name]: Math.max(0, Math.min(100, Number(input.value) || 0)) } });
+    renderBarberDashboard();
+    renderFinancial();
+  });
+  $("#barbersAdminList")?.addEventListener("click", event => {
+    const editButton = event.target.closest("[data-edit-barber]");
+    const toggleButton = event.target.closest("[data-toggle-barber]");
+    if (!editButton && !toggleButton) return;
+    event.stopImmediatePropagation();
+    if (editButton) return editBarberQuickForm(editButton.dataset.editBarber);
+    if (toggleButton) return toggleBarberVisibility(toggleButton.dataset.toggleBarber);
+  });
+  $("#cancelBarberEdit")?.addEventListener("click", resetBarberQuickForm);
+
+  $("#barbersAdminList")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-create-barber-access]");
+    const resetButton = event.target.closest("[data-reset-barber-password]");
+    if (button && !button.disabled) return manageBarberAccess(button.dataset.createBarberAccess, "create");
+    if (resetButton) return manageBarberAccess(resetButton.dataset.resetBarberPassword, "reset-password");
+  });
+  $("#barberDashboardSelect")?.addEventListener("change", renderBarberDashboard);
+  $("#barberDashboardAgenda")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-edit-booking]");
+    if (!button) return;
+    openBookingModal(button.dataset.editBooking);
+  });
+
+  $("#financeBarberReport")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-pay-settlement]");
+    if (!button) return;
+    payBarberSettlement(button.dataset.paySettlement);
+  });
+  $("#openCashRegister")?.addEventListener("click", openCashRegister);
+  $("#closeCashRegister")?.addEventListener("click", closeCashRegister);
+
+  $("#productForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = $("#productName").value.trim();
+    if (name.length < 2) return showToast("Informe o nome do produto.", true);
+    L.upsertProduct({
+      id: $("#productId").value || `${L.slugify(name)}-${Date.now()}`,
+      name,
+      category: $("#productCategory").value.trim() || "Geral",
+      cost: Number($("#productCost").value) || 0,
+      price: Number($("#productPrice").value) || 0,
+      quantity: Number($("#productQuantity").value) || 0,
+      minStock: Number($("#productMinStock").value) || 0,
+      code: $("#productCode").value.trim(),
+      description: $("#productDescription").value.trim(),
+      active: $("#productActive").checked
+    });
+    resetProductForm();
+    renderProducts();
+    showToast("Produto salvo.");
+  });
+
+  $("#cancelProductEdit")?.addEventListener("click", resetProductForm);
+
+  $$("#stockType, #stockQuantity").forEach(input => input.addEventListener("input", updateStockPreview));
+  $$("[data-close-stock-modal]").forEach(button => button.addEventListener("click", closeStockModal));
+  $("#stockForm")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const product = L.getProducts(true).find(item => String(item.id) === String($("#stockProductId").value));
+    if (!product) return showToast("Produto não encontrado.", true);
+    const type = $("#stockType").value;
+    const quantity = stockQuantityValue();
+    const delta = stockDelta(type, quantity, product.quantity);
+    const nextQuantity = product.quantity + delta;
+    if (nextQuantity < 0) return showToast("Estoque insuficiente para essa movimentação.", true);
+    const savedProduct = L.upsertProduct({ ...product, quantity: nextQuantity });
+    L.upsertInventoryMovement({
+      id: `inventory-${savedProduct.id}-${Date.now()}`,
+      productId: savedProduct.id,
+      productName: savedProduct.name,
+      type,
+      quantity,
+      reason: $("#stockReason").value.trim() || (type === "entrada" ? "Entrada de estoque" : "Movimentação de estoque")
+    });
+    if (type === "venda") {
+      const method = $("#stockPaymentMethod").value;
+      const total = savedProduct.price * quantity;
+      const paymentId = `product-sale-${savedProduct.id}-${Date.now()}`;
+      L.upsertPayment({
+        id: paymentId,
+        grossAmount: total,
+        discountAmount: 0,
+        feeAmount: 0,
+        netAmount: total,
+        method,
+        status: method === "pendente" ? "pending" : "paid",
+        notes: `Venda de produto: ${savedProduct.name} · quantidade ${quantity}`
+      });
+      if (L.upsertProductSale) L.upsertProductSale({
+        id: `sale-${paymentId}`,
+        productId: savedProduct.id,
+        productName: savedProduct.name,
+        paymentId,
+        quantity,
+        unitPrice: savedProduct.price,
+        totalAmount: total,
+        paymentMethod: method,
+        notes: $("#stockReason").value.trim()
+      });
+    }
+    closeStockModal();
+    renderProducts();
+    renderFinancial();
+    showToast(type === "entrada" ? "Entrada registrada no estoque." : "Movimentação registrada e estoque atualizado.");
+  });
+
+  $("#productsList")?.addEventListener("click", event => {
+    const row = event.target.closest("[data-product-id]");
+    const action = event.target.closest("[data-product-action]")?.dataset.productAction;
+    if (!row || !action) return;
+    const products = L.getProducts(true);
+    const product = products.find(item => String(item.id) === String(row.dataset.productId));
+    if (!product) return;
+    if (action === "sale") return openStockModal(product, "venda");
+    if (action === "entry") return openStockModal(product, "entrada");
+    if (action === "edit") {
+      $("#productId").value = product.id;
+      $("#productName").value = product.name;
+      $("#productCategory").value = product.category;
+      $("#productCost").value = product.cost;
+      $("#productPrice").value = product.price;
+      $("#productQuantity").value = product.quantity;
+      $("#productMinStock").value = product.minStock;
+      $("#productCode").value = product.code;
+      $("#productDescription").value = product.description;
+      $("#productActive").checked = product.active;
+      $("#productFormTitle").textContent = "Editar produto";
+      $("#cancelProductEdit").classList.remove("hidden");
+      $("#productForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (action === "toggle") {
+      L.upsertProduct({ ...product, active: !product.active });
+      renderProducts();
+    }
+    if (action === "delete" && window.confirm(`Excluir ${product.name}?`)) {
+      L.setProducts(products.filter(item => String(item.id) !== String(product.id)));
+      renderProducts();
+      showToast("Produto excluído.");
+    }
+  });
 
   function parseBarbers(value, primary) {
     const names = String(value || "").split(/\r?\n|,/).map(item => item.trim()).filter(Boolean);
@@ -1069,6 +1894,7 @@
   });
   $("#credentialsForm").addEventListener("submit", async event => {
     event.preventDefault(); const current = getCredentials(); const name = $("#credentialName").value.trim(); const email = $("#credentialEmail").value.trim().toLowerCase(); const password = $("#credentialPassword").value; const confirmation = $("#credentialPasswordConfirm").value;
+    if (isSupabaseAuthEnabled()) return showToast("Com Supabase conectado, gerencie usuários e senhas pelo Supabase Auth.", true);
     if (name.length < 2 || !email.includes("@")) return showToast("Informe nome e e-mail válidos.", true); if (password && password.length < 6) return showToast("A nova senha precisa ter 6 caracteres.", true); if (password !== confirmation) return showToast("As novas senhas não coincidem.", true);
     L.save(L.KEYS.credentials, { ...current, name, email, passwordHash: password ? await hashPassword(password) : current.passwordHash, updatedAt: new Date().toISOString() }); $("#adminNameLabel").textContent = name; loadSettingsForms(); showToast("Acesso atualizado.");
   });
@@ -1086,11 +1912,30 @@
 
   function refreshAll() {
     refreshBarberOptions();
-    renderOverview(); renderBookings(); renderClients(); renderServices(); renderPortfolioAdmin(); renderTestimonialsAdmin(); loadAvailabilityForm(); renderBlocks(); renderCalendar(); renderReports(); loadSettingsForms(); renderAdminTutorial(); updateStorageMeter();
+    renderOverview(); renderBookings(); renderFinancial(); renderBarbersAdmin(); renderBarberDashboard(); renderClients(); renderProducts(); renderServices(); renderPortfolioAdmin(); renderTestimonialsAdmin(); loadAvailabilityForm(); renderBlocks(); renderCalendar(); renderReports(); loadSettingsForms(); renderAdminTutorial(); updateStorageMeter();
   }
   window.addEventListener("storage", refreshAll);
   window.addEventListener("legado:datachange", refreshAll);
 
-  buildWeekdayRows(); resetPortfolioForm(); resetTestimonialForm(); configureAuthView();
-  if (getCredentials() && sessionStorage.getItem(L.KEYS.session) === "active") showAdmin();
+  async function initAuth() {
+    configureAuthView();
+    if (isSupabaseAuthEnabled() && sessionStorage.getItem(L.KEYS.session) === "active") {
+      showAuthMessage("Validando sessão do Supabase...");
+      try {
+        const profile = await window.LegadoSupabase.getAdminProfile?.();
+        if (profile) {
+          showAuthMessage("");
+          showAdmin(profile);
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao validar sessão Supabase:", error);
+      }
+      sessionStorage.removeItem(L.KEYS.session);
+      showAuthMessage("");
+    }
+    if (!isSupabaseAuthEnabled() && getCredentials() && sessionStorage.getItem(L.KEYS.session) === "active") showAdmin();
+  }
+
+  buildWeekdayRows(); resetPortfolioForm(); resetTestimonialForm(); initAuth();
 })();

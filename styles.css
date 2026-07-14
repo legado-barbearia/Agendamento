@@ -1937,3 +1937,243 @@ body.profile-onboarding-open #profileSubmitButton{
 .portfolio-card:hover img{
   transform:scale(calc(var(--portfolio-zoom,1) + .045))!important;
 }
+
+/* V53 - Estabilizacao mobile: largura real, cards compactos e botoes fixos sem cobrir conteudo */
+html,body{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+img,video,canvas,svg{
+  max-width:100%;
+}
+
+.section,
+.hero,
+.booking-section,
+footer{
+  width:100%;
+}
+
+.mobile-booking-cta,
+.floating-whatsapp{
+  will-change:transform,opacity;
+}
+
+.mobile-booking-cta.is-hidden{
+  opacity:0!important;
+  transform:translateY(calc(120% + env(safe-area-inset-bottom)))!important;
+  pointer-events:none!important;
+}
+
+@media(max-width:720px){
+  body{
+    padding-bottom:calc(74px + env(safe-area-inset-bottom))!important;
+  }
+
+  .site-header{
+    width:100%;
+    max-width:100vw;
+  }
+
+  .main-nav.open{
+    max-height:calc(100vh - 82px - env(safe-area-inset-bottom));
+    overflow:auto;
+  }
+
+  .hero,
+  .section,
+  .booking-section{
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+
+  .hero{
+    gap:18px!important;
+  }
+
+  .hero-copy h1{
+    font-size:clamp(36px,12vw,48px)!important;
+    line-height:1.02!important;
+  }
+
+  .hero-copy>p,
+  .section-heading p,
+  .about-copy>p,
+  .booking-intro>p{
+    font-size:11px!important;
+    line-height:1.65!important;
+  }
+
+  .section-heading{
+    margin-bottom:18px!important;
+  }
+
+  .section-heading h2,
+  .booking-intro h2,
+  .experience-card h2{
+    font-size:clamp(27px,8vw,36px)!important;
+    line-height:1.08!important;
+    margin-bottom:9px!important;
+  }
+
+  .services-grid,
+  .barbers-grid,
+  .portfolio-grid{
+    gap:8px!important;
+  }
+
+  .service-card,
+  .barber-card,
+  .portfolio-card,
+  .visit-card,
+  .tutorial-step,
+  .testimonial-card,
+  .lookup-card,
+  .lookup-result,
+  .profile-card{
+    border-radius:14px!important;
+  }
+
+  .service-card{
+    min-height:96px!important;
+    padding:12px!important;
+  }
+
+  .service-card p{
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .portfolio-card,
+  .portfolio-card.featured{
+    min-height:250px!important;
+  }
+
+  .booking-card{
+    border-radius:16px!important;
+  }
+
+  .steps{
+    grid-template-columns:repeat(4,1fr)!important;
+    gap:6px!important;
+  }
+
+  .steps i{
+    display:none!important;
+  }
+
+  .step{
+    min-width:0;
+  }
+
+  .form-step{
+    padding:15px 12px!important;
+  }
+
+  .field-grid input,
+  .field-grid select,
+  .field-grid textarea,
+  .lookup-card input,
+  .date-picker-label input{
+    min-height:46px;
+    font-size:16px;
+  }
+
+  .choice,
+  .date-button,
+  .time-button{
+    min-width:0;
+  }
+
+  .choice strong,
+  .service-card h3,
+  .barber-card h3,
+  .portfolio-card-content h3{
+    overflow-wrap:anywhere;
+  }
+
+  .date-strip{
+    max-height:none!important;
+    overflow:visible!important;
+  }
+
+  .time-period-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+
+  .time-button{
+    min-height:48px!important;
+    border-radius:11px!important;
+  }
+
+  .booking-review-grid,
+  .client-booking-details,
+  .client-profile-summary-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .form-footer{
+    position:sticky;
+    bottom:0;
+    z-index:4;
+    margin-left:-12px;
+    margin-right:-12px;
+    padding:11px 12px calc(11px + env(safe-area-inset-bottom))!important;
+    background:rgba(3,14,24,.94)!important;
+    backdrop-filter:blur(14px);
+  }
+
+  .form-footer .button{
+    min-height:42px;
+  }
+
+  .floating-whatsapp{
+    right:14px!important;
+    bottom:calc(58px + env(safe-area-inset-bottom))!important;
+    width:44px!important;
+    height:44px!important;
+  }
+
+  .mobile-booking-cta{
+    left:14px!important;
+    right:14px!important;
+    bottom:calc(8px + env(safe-area-inset-bottom))!important;
+    min-height:38px!important;
+    border-radius:13px!important;
+    font-size:8px!important;
+  }
+
+  footer{
+    padding-left:18px!important;
+    padding-right:18px!important;
+    padding-bottom:calc(68px + env(safe-area-inset-bottom))!important;
+  }
+}
+
+@media(max-width:390px){
+  .hero,
+  .section,
+  .booking-section{
+    padding-left:11px!important;
+    padding-right:11px!important;
+  }
+
+  .services-grid,
+  .choice-grid,
+  .portfolio-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .date-strip,
+  .time-period-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  .form-step{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+}

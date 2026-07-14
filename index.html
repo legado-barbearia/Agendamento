@@ -104,7 +104,7 @@
         <article class="tutorial-step reveal"><span class="tutorial-number">06</span><div><small>DEPOIS</small><h3>Volte sem repetir dados</h3><p>Seu nome, WhatsApp e preferências ficam salvos para próximos agendamentos e avaliações.</p></div></article>
       </div>
       <div class="tutorial-callout reveal">
-        <div><span class="eyebrow">DICA IMPORTANTE</span><h3>Guarde o código do seu agendamento</h3><p>Ele permite consultar os detalhes, cancelar ou reagendar no mesmo aparelho enquanto o sistema ainda não estiver conectado ao Supabase.</p></div>
+        <div><span class="eyebrow">DICA IMPORTANTE</span><h3>Guarde o código do seu agendamento</h3><p>Ele permite consultar os detalhes, cancelar ou reagendar seu horário pelo site usando seu WhatsApp.</p></div>
         <div class="tutorial-actions"><a class="button" href="#agendar" data-open-profile>Criar meu perfil</a><a class="button button-secondary" href="#agendar">Ir para agenda</a></div>
       </div>
     </section>
@@ -251,7 +251,7 @@
           <label><span>Seu WhatsApp</span><input id="lookupPhone" type="tel" placeholder="(64) 99999-9999" required /></label>
           <label><span>Código do agendamento</span><input id="lookupCode" type="text" placeholder="Ex.: ABC-1234" required /></label>
           <button class="button" type="submit">Consultar horário</button>
-          <small>Os dados são encontrados somente no aparelho em que o agendamento foi realizado nesta versão.</small>
+          <small>Use o WhatsApp e o código recebido para consultar seu horário pelo site.</small>
         </form>
         <div class="lookup-result" id="lookupResult">
           <div class="empty-state"><strong>Nenhum horário consultado</strong><p>Digite seus dados para visualizar, cancelar ou reagendar.</p></div>
@@ -345,7 +345,7 @@
       <div class="booking-code-box"><span>Seu código</span><strong id="confirmationCode">---</strong><button type="button" id="copyCodeButton">Copiar</button></div>
       <div class="confirmation-summary" id="confirmationSummary"></div>
       <div class="deposit-box hidden" id="depositBox"><span>SINAL POR PIX</span><strong id="depositAmount">R$ 0,00</strong><p id="depositMessage">O sinal será conferido manualmente pela barbearia.</p><div><code id="depositPixKey"></code><button type="button" id="copyPixButton">Copiar chave</button></div></div>
-      <p class="modal-note">Guarde o código para consultar, cancelar ou reagendar neste aparelho.</p>
+      <p class="modal-note">Guarde o código para consultar, cancelar ou reagendar pelo site.</p>
       <div class="modal-actions">
         <button class="button" id="whatsappButton" type="button">Enviar pelo WhatsApp</button>
         <button class="button button-secondary" id="calendarButton" type="button">Adicionar ao calendário</button>

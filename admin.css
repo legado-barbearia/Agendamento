@@ -95,6 +95,116 @@
   .admin-app{padding-top:28px}.admin-command-bar{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-layout{grid-template-columns:1fr}.admin-sidebar{display:none}.admin-mobile-nav{position:sticky;top:86px;z-index:24;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:18px;padding:10px;border:1px solid var(--line);border-radius:15px;background:rgba(7,23,40,.94);backdrop-filter:blur(16px);box-shadow:0 12px 30px rgba(0,0,0,.22)}.admin-mobile-nav label{display:grid;gap:6px}.admin-mobile-nav label>span{font-size:7px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.admin-mobile-nav select{width:100%;height:42px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:#0b2237;color:#eef2f5;padding:0 12px;outline:none}.admin-mobile-nav select:focus{border-color:var(--gold)}
 }
 
+/* v60 - finance, barbers and products foundation */
+.barber-admin-row {
+  grid-template-columns: auto minmax(0, 1fr) minmax(120px, 160px) auto;
+  align-items: center;
+}
+
+.barber-row-actions {
+  display: grid;
+  gap: 7px;
+  justify-items: end;
+}
+
+.barber-row-actions .icon-action[disabled] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.inline-number-label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.inline-number-label input {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(218, 181, 76, .28);
+  background: rgba(5, 17, 30, .72);
+  color: var(--text);
+}
+
+.management-item.stock-low {
+  border-color: rgba(255, 107, 107, .42);
+  box-shadow: inset 3px 0 0 rgba(255, 107, 107, .72);
+}
+
+.barber-dashboard-card {
+  margin-bottom: 19px;
+}
+
+.compact-select {
+  min-width: 230px;
+  display: grid;
+  gap: 7px;
+}
+
+.compact-select span,
+.mini-section-title {
+  font-size: 7px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.compact-select select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 11px;
+  background: rgba(1,9,16,.46);
+  color: #eef2f5;
+  padding: 10px 12px;
+}
+
+.barber-dashboard-stats {
+  margin-bottom: 15px;
+}
+
+.barber-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.barber-dashboard-grid > div {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+@media (max-width: 720px) {
+  .barber-admin-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .barber-admin-row .inline-number-label,
+  .barber-admin-row .money-stat,
+  .barber-admin-row .barber-row-actions {
+    grid-column: 1 / -1;
+  }
+
+  .barber-row-actions {
+    justify-items: stretch;
+  }
+
+  .barber-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 @media(max-width:850px){
   .admin-header-actions{gap:7px}.admin-header-actions .button{padding:9px 10px}.admin-welcome{align-items:stretch}.admin-date-card{min-width:0}.stats-grid{gap:10px}.stat-card{min-height:112px;padding:15px}.stat-card strong{font-size:35px}.stat-card strong.money-stat{font-size:21px}.overview-grid{gap:12px}.admin-card{padding:17px}.panel-heading{gap:12px}.heading-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.heading-actions .button{width:100%}.filters-card{padding:12px}
   .booking-table-card{border:0;background:transparent;box-shadow:none;overflow:visible}.booking-table{min-width:0;display:grid;gap:12px}.booking-row.header{display:none}.booking-row:not(.header){display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:17px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(150deg,rgba(15,43,69,.92),rgba(5,18,31,.97));box-shadow:0 12px 28px rgba(0,0,0,.14)}.booking-row>[data-label]::before{content:attr(data-label);display:block;margin-bottom:6px;font-size:6px;letter-spacing:.12em;text-transform:uppercase;color:#748692}.booking-row .booking-client{grid-column:1/-1;padding-bottom:12px;border-bottom:1px solid var(--soft-line)}.booking-row .booking-client strong{font-family:var(--serif);font-size:20px;color:var(--gold-light)}.booking-row .booking-actions{grid-column:1/-1;padding-top:12px;border-top:1px solid var(--soft-line)}.booking-row .booking-actions::before{width:100%}.booking-actions .icon-action{flex:1;min-width:92px;justify-content:center}.booking-row-conflict{border-color:rgba(223,109,103,.46)!important;box-shadow:0 0 0 1px rgba(223,109,103,.08),0 12px 28px rgba(0,0,0,.14)!important}
@@ -1248,5 +1358,434 @@
   }
   .reserved-marker{
     min-height:28px;
+  }
+}
+
+/* V53 - Admin mobile mais compacto, sem estouro lateral e com areas de toque confortaveis */
+html,body{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+.admin-content,
+.admin-panel,
+.admin-card,
+.booking-table,
+.management-list,
+.calendar-shell{
+  min-width:0;
+}
+
+.admin-card,
+.filters-card,
+.booking-table-card,
+.calendar-shell,
+.management-item,
+.portfolio-admin-item,
+.client-card,
+.service-management-item{
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:720px){
+  .admin-body:before{
+    background:linear-gradient(180deg,rgba(2,9,16,.94),rgba(2,9,16,.78)),url("assets/admin-app-background.png") center top 86px/260px auto no-repeat;
+    opacity:.34;
+  }
+
+  .admin-header{
+    width:100%;
+    max-width:100vw;
+  }
+
+  .admin-app{
+    padding-left:10px!important;
+    padding-right:10px!important;
+    padding-bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  }
+
+  .admin-welcome{
+    padding:14px!important;
+    border-radius:16px!important;
+  }
+
+  .admin-welcome h1{
+    font-size:clamp(27px,9vw,34px)!important;
+  }
+
+  .admin-command-bar{
+    grid-template-columns:1fr!important;
+  }
+
+  .admin-command{
+    min-height:62px!important;
+    grid-template-columns:34px minmax(0,1fr)!important;
+    align-content:center!important;
+  }
+
+  .admin-command>span{
+    width:34px!important;
+    height:34px!important;
+  }
+
+  .admin-mobile-nav{
+    position:sticky;
+    top:68px!important;
+    z-index:26;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+    padding:9px!important;
+    border-radius:14px!important;
+    max-width:100%;
+  }
+
+  .admin-mobile-nav select,
+  .admin-mobile-nav .button{
+    min-height:44px!important;
+    font-size:12px!important;
+  }
+
+  .panel-heading{
+    margin-bottom:14px!important;
+  }
+
+  .panel-heading h2{
+    font-size:clamp(27px,8vw,34px)!important;
+  }
+
+  .admin-help-strip,
+  .admin-help-grid article{
+    padding:11px!important;
+    border-radius:13px!important;
+  }
+
+  .admin-card,
+  .filters-card,
+  .calendar-shell{
+    border-radius:14px!important;
+  }
+
+  .admin-card{
+    padding:13px!important;
+  }
+
+  .card-heading{
+    gap:8px!important;
+    margin-bottom:11px!important;
+  }
+
+  .card-heading h3{
+    font-size:20px!important;
+  }
+
+  .stats-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+
+  .stat-card{
+    min-height:82px!important;
+    padding:12px!important;
+    border-radius:14px!important;
+  }
+
+  .stat-card strong{
+    font-size:28px!important;
+  }
+
+  .stat-card strong.money-stat{
+    font-size:17px!important;
+  }
+
+  .filters-card,
+  .report-filters,
+  .admin-field-grid,
+  .management-grid,
+  .portfolio-management-grid,
+  .availability-options,
+  .clients-grid,
+  .reports-grid{
+    grid-template-columns:1fr!important;
+    gap:9px!important;
+  }
+
+  .auth-form input,
+  .management-form input,
+  .management-form select,
+  .management-form textarea,
+  .schedule-form input,
+  .schedule-form select,
+  .report-filters input,
+  .filters-card input,
+  .filters-card select,
+  .booking-editor input,
+  .booking-editor select,
+  .booking-editor textarea{
+    min-height:46px!important;
+    font-size:16px!important;
+  }
+
+  .booking-table-card{
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    overflow:visible!important;
+  }
+
+  .booking-table{
+    display:grid!important;
+    gap:10px!important;
+    min-width:0!important;
+  }
+
+  .booking-row.header{
+    display:none!important;
+  }
+
+  .booking-row:not(.header){
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    padding:13px!important;
+    min-height:0!important;
+    border-radius:14px!important;
+  }
+
+  .booking-client strong{
+    font-size:18px!important;
+  }
+
+  .booking-actions,
+  .management-actions,
+  .client-card-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:7px!important;
+    width:100%!important;
+  }
+
+  .icon-action,
+  .client-card-actions button,
+  .client-card-actions a,
+  .management-actions .file-button{
+    min-height:39px!important;
+    width:100%!important;
+    justify-content:center!important;
+  }
+
+  .today-booking-item,
+  .management-item,
+  .service-management-item,
+  .portfolio-admin-item,
+  .client-card,
+  .calendar-booking,
+  .barber-photo-item{
+    grid-template-columns:1fr!important;
+    border-radius:14px!important;
+    padding:12px!important;
+  }
+
+  .today-booking-time{
+    font-size:20px!important;
+  }
+
+  .calendar-shell{
+    min-height:auto!important;
+    max-width:100%;
+    overflow-x:auto!important;
+  }
+
+  .day-calendar,
+  .calendar-day-overview{
+    padding:11px!important;
+  }
+
+  .calendar-toolbar{
+    padding:11px!important;
+  }
+
+  .calendar-nav,
+  .calendar-view-switch{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+
+  .calendar-nav button,
+  .calendar-view-switch button{
+    min-height:40px!important;
+    padding:8px 6px!important;
+  }
+
+  .week-calendar{
+    min-width:640px!important;
+  }
+
+  .month-calendar{
+    min-width:620px!important;
+  }
+
+  .schedule-table{
+    overflow-x:auto!important;
+  }
+
+  .schedule-row{
+    min-width:620px!important;
+  }
+
+  .modal{
+    padding:10px!important;
+  }
+
+  .admin-modal .modal-card,
+  .modal-card.booking-editor{
+    width:100%!important;
+    max-height:calc(100vh - 20px)!important;
+    padding:18px 13px!important;
+    border-radius:16px!important;
+  }
+
+  .modal-actions,
+  .form-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+
+  .admin-toast{
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+    font-size:10px!important;
+  }
+}
+
+@media(max-width:390px){
+  .admin-app{
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+
+  .stats-grid,
+  .booking-actions,
+  .management-actions,
+  .client-card-actions,
+  .calendar-nav,
+  .calendar-view-switch{
+    grid-template-columns:1fr!important;
+  }
+
+  .admin-card,
+  .filters-card,
+  .booking-row:not(.header){
+    padding:11px!important;
+  }
+}
+/* v61 - Fechamento financeiro */
+.payment-editor .editor-summary {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 16px;
+  padding: 14px;
+  border: 1px solid rgba(213, 178, 75, 0.24);
+  border-radius: 14px;
+  background: rgba(5, 19, 31, 0.72);
+}
+
+.payment-editor .editor-summary strong {
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.payment-editor .editor-summary span {
+  color: rgba(246, 241, 225, 0.76);
+  font-size: 0.9rem;
+}
+
+.payment-total-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 0 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(213, 178, 75, 0.18), rgba(213, 178, 75, 0.08));
+  border: 1px solid rgba(213, 178, 75, 0.32);
+}
+
+.payment-total-line span {
+  color: rgba(246, 241, 225, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.payment-total-line strong {
+  color: var(--gold);
+  font-size: 1.28rem;
+}
+
+/* v63 - Repasses de barbeiros */
+.settlement-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.settlement-row .button {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.stock-low {
+  border-color: rgba(255, 116, 116, 0.4);
+  background: rgba(255, 116, 116, 0.06);
+}
+
+.stock-low small {
+  color: rgba(255, 179, 179, 0.9);
+}
+
+.cash-register-card {
+  margin: 16px 0;
+}
+
+.cash-register-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+
+.cash-register-grid > div {
+  padding: 12px;
+  border: 1px solid rgba(213, 178, 75, 0.18);
+  border-radius: 12px;
+  background: rgba(5, 19, 31, 0.55);
+}
+
+.cash-register-grid span {
+  display: block;
+  color: rgba(246, 241, 225, 0.65);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cash-register-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+}
+
+@media (max-width: 560px) {
+  .settlement-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-row .button {
+    width: 100%;
+  }
+
+  .cash-register-grid {
+    grid-template-columns: 1fr;
   }
 }
