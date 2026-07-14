@@ -1,4 +1,4 @@
-const CACHE = "legado-v47-reserva-supabase";
+const CACHE = "legado-v48-consulta-horarios";
 const ASSETS = [
   "./", "./index.html", "./admin.html", "./privacidade.html", "./styles.css", "./admin.css", "./core.js", "./app.js", "./admin.js", "./supabase-bridge.js", "./manifest.webmanifest",
   "./assets/logo.png", "./assets/logo-192.png", "./assets/favicon.png", "./assets/gilliel-apresentacao.webp", "./assets/corte.webp", "./assets/barba.webp", "./assets/produtos.webp", "./assets/agendamento.webp",

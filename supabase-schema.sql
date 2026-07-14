@@ -283,6 +283,21 @@ as $$
 $$;
 grant execute on function public.booked_intervals(date) to anon, authenticated;
 
+-- Retorna somente os intervalos ocupados do profissional escolhido.
+drop function if exists public.booked_intervals_for_professional(date, text);
+
+create or replace function public.booked_intervals_for_professional(p_date date, p_professional text)
+returns table (start_time time, end_time time, professional text)
+language sql security definer set search_path = public
+as $$
+  select b.start_time, b.end_time, b.professional
+  from public.bookings b
+  where b.booking_date = p_date
+    and b.status in ('pending','confirmed')
+    and lower(b.professional) = lower(coalesce(nullif(trim(p_professional), ''), b.professional));
+$$;
+grant execute on function public.booked_intervals_for_professional(date, text) to anon, authenticated;
+
 -- Consulta segura por telefone e código. Não lista agendamentos de terceiros.
 drop function if exists public.lookup_booking(text, text);
 

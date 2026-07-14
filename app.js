@@ -429,22 +429,22 @@
       elements.times.innerHTML = '<p class="availability-note">Escolha o serviço e a data para ver os horários.</p>';
       return;
     }
-    if (window.LegadoSupabase && L.loadRemoteBookingsForDate && !remoteBookingsLoadedDates.has(state.date)) {
+    const professional = elements.professional.value || settings.professional;
+    const remoteKey = `${state.date}|${professional}`;
+    if (window.LegadoSupabase && L.loadRemoteBookingsForDate && !remoteBookingsLoadedDates.has(remoteKey)) {
       elements.times.innerHTML = '<p class="availability-note">Consultando horários já reservados...</p>';
-      L.loadRemoteBookingsForDate(state.date)
+      L.loadRemoteBookingsForDate(state.date, professional)
         .then(() => {
-          remoteBookingsLoadedDates.add(state.date);
+          remoteBookingsLoadedDates.add(remoteKey);
           buildTimes();
         })
         .catch(error => {
           console.error("Erro ao consultar horários no Supabase:", error);
-          remoteBookingsLoadedDates.add(state.date);
-          showToast("Não consegui consultar os horários online agora. Mostrando a agenda local.", true);
+          remoteBookingsLoadedDates.add(remoteKey);
           buildTimes();
         });
       return;
     }
-    const professional = elements.professional.value || settings.professional;
     const slots = L.generateSlots(state.date, state.service.durationMinutes, { professional }).filter(slot => slot.available !== false);
     if (!slots.length) {
       elements.times.innerHTML = '<p class="availability-note">Não há horários disponíveis para este serviço nesta data. Tente outro dia.</p>';

@@ -141,11 +141,19 @@
     return rows?.[0] || null;
   }
 
-  async function fetchActiveBookingsForDate(date) {
-    const rows = await request("rpc/booked_intervals", {
-      method: "POST",
-      body: JSON.stringify({ p_date: date })
-    });
+  async function fetchActiveBookingsForDate(date, professional = "") {
+    let rows;
+    try {
+      rows = await request("rpc/booked_intervals_for_professional", {
+        method: "POST",
+        body: JSON.stringify({ p_date: date, p_professional: professional || L.getSettings().professional })
+      });
+    } catch (error) {
+      rows = await request("rpc/booked_intervals", {
+        method: "POST",
+        body: JSON.stringify({ p_date: date })
+      });
+    }
     return (rows || []).map((row, index) => L.normalizeBooking({
       id: `remote-${date}-${cleanTime(row.start_time)}-${index}`,
       code: "OCUPADO",
@@ -157,7 +165,7 @@
       endTime: cleanTime(row.end_time),
       name: "Cliente Legado",
       phone: "",
-      professional: row.professional || "",
+      professional: row.professional || professional || "",
       status: "confirmed",
       source: "supabase"
     }));
@@ -471,8 +479,8 @@
     }
   };
 
-  L.loadRemoteBookingsForDate = async function loadRemoteBookingsForDate(date) {
-    const remoteBookings = await fetchActiveBookingsForDate(date);
+  L.loadRemoteBookingsForDate = async function loadRemoteBookingsForDate(date, professional = "") {
+    const remoteBookings = await fetchActiveBookingsForDate(date, professional);
     const merged = new Map(L.getBookings().map(item => [String(item.id), item]));
     remoteBookings.forEach(item => merged.set(String(item.id), item));
     original.setBookings([...merged.values()]);
