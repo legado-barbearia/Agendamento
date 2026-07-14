@@ -217,7 +217,7 @@
   function bookingRow(booking) {
     const item = L.normalizeBooking(booking);
     return {
-      id: stableUuid(item.id), code: item.code, service_id: null, service_name: item.service,
+      id: stableUuid(item.id), code: item.code, service_id: item.serviceId || null, service_name: item.service,
       duration_minutes: item.durationMinutes, price_value: item.priceValue, booking_date: item.date,
       start_time: item.startTime, end_time: item.endTime, client_name: item.name, client_phone: item.phone,
       phone_digits: item.phoneDigits, client_photo: item.clientPhoto || "", professional: item.professional, notes: item.notes, status: item.status,
@@ -432,23 +432,39 @@
   };
 
   L.reserveBookingOnline = async function reserveBookingOnline(booking) {
-    const remoteBookings = await fetchActiveBookingsForDate(booking.date);
-    const merged = new Map(L.getBookings().map(item => [String(item.id), item]));
-    remoteBookings.forEach(item => merged.set(String(item.id), item));
-    original.setBookings([...merged.values()]);
-
-    const result = original.reserveBooking(booking);
-    if (!result.ok) return result;
-
     try {
-      await Promise.all([
-        upsertMinimal("bookings", bookingRow(result.booking), true),
-        upsert("clients", clientRow({ name: result.booking.name, phone: result.booking.phone, phoneDigits: result.booking.phoneDigits, photo: result.booking.clientPhoto }), true)
-      ]);
-      return { ok: true, booking: result.booking };
+      const draft = L.normalizeBooking({ ...booking, status: "confirmed" });
+      const row = bookingRow(draft);
+      const rows = await request("rpc/reserve_booking", {
+        method: "POST",
+        body: JSON.stringify({
+          p_id: row.id,
+          p_code: row.code,
+          p_service_id: row.service_id,
+          p_service_name: row.service_name,
+          p_duration_minutes: row.duration_minutes,
+          p_price_value: row.price_value,
+          p_booking_date: row.booking_date,
+          p_start_time: row.start_time,
+          p_client_name: row.client_name,
+          p_client_phone: row.client_phone,
+          p_phone_digits: row.phone_digits,
+          p_client_photo: row.client_photo,
+          p_professional: row.professional,
+          p_notes: row.notes,
+          p_source: row.source
+        })
+      });
+      const saved = mapBooking((rows || [])[0] || row);
+      original.upsertBooking(saved);
+      original.upsertClient({ name: saved.name, phone: saved.phone, phoneDigits: saved.phoneDigits, photo: saved.clientPhoto });
+      return { ok: true, booking: saved };
     } catch (error) {
-      original.deleteBooking(result.booking.id);
-      if (String(error.message || "").includes("bookings_no_active_overlap")) {
+      if (/slot_conflict|not_available|bookings_no_active_overlap/i.test(String(error.message || ""))) {
+        const remoteBookings = await fetchActiveBookingsForDate(booking.date).catch(() => []);
+        const merged = new Map(L.getBookings().map(item => [String(item.id), item]));
+        remoteBookings.forEach(item => merged.set(String(item.id), item));
+        original.setBookings([...merged.values()]);
         return { ok: false, reason: "conflict", error };
       }
       throw error;

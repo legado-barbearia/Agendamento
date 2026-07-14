@@ -301,3 +301,214 @@ as $$
   limit 1;
 $$;
 grant execute on function public.lookup_booking(text, text) to anon, authenticated;
+
+-- Reserva transacional usada pelo site público e pelo painel.
+-- O cliente só recebe confirmação quando este INSERT no Supabase acontece.
+-- Valida no banco: serviço, expediente, antecedência, bloqueios, barbeiro e conflitos.
+drop function if exists public.reserve_booking(
+  uuid, text, text, text, integer, numeric, date, time, text, text, text, text, text, text, text
+);
+
+revoke insert on public.bookings from anon;
+drop policy if exists "public create confirmed booking" on public.bookings;
+
+create or replace function public.reserve_booking(
+  p_id uuid,
+  p_code text,
+  p_service_id text,
+  p_service_name text,
+  p_duration_minutes integer,
+  p_price_value numeric,
+  p_booking_date date,
+  p_start_time time,
+  p_client_name text,
+  p_client_phone text,
+  p_phone_digits text,
+  p_client_photo text default '',
+  p_professional text default '',
+  p_notes text default '',
+  p_source text default 'site'
+)
+returns table (
+  id uuid,
+  code text,
+  service_id text,
+  service_name text,
+  duration_minutes integer,
+  price_value numeric,
+  booking_date date,
+  start_time time,
+  end_time time,
+  client_name text,
+  client_phone text,
+  phone_digits text,
+  client_photo text,
+  professional text,
+  notes text,
+  status text,
+  source text,
+  cancellation_reason text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_settings jsonb;
+  v_availability jsonb;
+  v_day_config jsonb;
+  v_duration integer;
+  v_price numeric(10,2);
+  v_service_name text;
+  v_professional text;
+  v_phone_digits text;
+  v_buffer integer;
+  v_minimum_lead integer;
+  v_start_ts timestamp;
+  v_end_ts timestamp;
+  v_lock_end_ts timestamp;
+  v_end_time time;
+  v_dow text;
+begin
+  select data into v_settings from public.business_settings where id = 'main';
+  select data into v_availability from public.availability where id = 'main';
+
+  if v_availability is null then
+    raise exception 'not_available: availability_not_configured' using errcode = 'P0001';
+  end if;
+
+  v_phone_digits := regexp_replace(coalesce(p_phone_digits, p_client_phone, ''), '\D', '', 'g');
+  while left(v_phone_digits, 2) = '55' and length(v_phone_digits) > 11 loop
+    v_phone_digits := substr(v_phone_digits, 3);
+  end loop;
+
+  if length(trim(coalesce(p_client_name, ''))) < 2 or length(v_phone_digits) < 10 or length(v_phone_digits) > 13 then
+    raise exception 'not_available: invalid_client' using errcode = 'P0001';
+  end if;
+
+  select s.name, s.duration_minutes, s.price
+    into v_service_name, v_duration, v_price
+  from public.services s
+  where s.id = p_service_id and s.active = true
+  limit 1;
+
+  if v_duration is null then
+    raise exception 'not_available: service_not_found' using errcode = 'P0001';
+  end if;
+
+  v_service_name := coalesce(v_service_name, nullif(trim(p_service_name), ''), 'Atendimento Legado');
+  v_duration := greatest(5, coalesce(v_duration, p_duration_minutes, 30));
+  v_price := coalesce(v_price, p_price_value, 0);
+  v_buffer := greatest(0, coalesce((v_availability->>'bufferMinutes')::integer, 0));
+  v_minimum_lead := greatest(0, coalesce((v_availability->>'minimumLeadMinutes')::integer, 0));
+  v_professional := nullif(trim(coalesce(p_professional, '')), '');
+
+  if v_professional is null then
+    v_professional := coalesce(v_settings->>'professional', 'Gilliel Glaydson');
+  end if;
+
+  v_start_ts := p_booking_date + p_start_time;
+  v_end_ts := v_start_ts + make_interval(mins => v_duration);
+  v_lock_end_ts := v_end_ts + make_interval(mins => v_buffer);
+  v_end_time := v_end_ts::time;
+
+  if v_end_ts::date <> p_booking_date then
+    raise exception 'not_available: service_outside_day' using errcode = 'P0001';
+  end if;
+
+  if v_start_ts < ((now() at time zone 'America/Sao_Paulo') + make_interval(mins => v_minimum_lead)) then
+    raise exception 'not_available: minimum_lead_time' using errcode = 'P0001';
+  end if;
+
+  v_dow := extract(dow from p_booking_date)::integer::text;
+  v_day_config := v_availability->'weekdays'->v_dow;
+
+  if coalesce((v_day_config->>'enabled')::boolean, false) is not true then
+    raise exception 'not_available: closed_day' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1
+    from jsonb_array_elements(coalesce(v_day_config->'periods', '[]'::jsonb)) as period(value)
+    where p_start_time >= (period.value->>'start')::time
+      and v_end_time <= (period.value->>'end')::time
+  ) then
+    raise exception 'not_available: outside_working_hours' using errcode = 'P0001';
+  end if;
+
+  if exists (
+    select 1
+    from public.blocked_slots bs
+    where bs.date = p_booking_date
+      and (
+        bs.all_day = true
+        or tsrange(p_booking_date + bs.start_time, p_booking_date + bs.end_time, '[)')
+           && tsrange(v_start_ts, v_lock_end_ts, '[)')
+      )
+  ) then
+    raise exception 'slot_conflict: blocked_period' using errcode = 'P0001';
+  end if;
+
+  if exists (
+    select 1
+    from public.bookings b
+    where b.booking_date = p_booking_date
+      and lower(b.professional) = lower(v_professional)
+      and b.status in ('pending', 'confirmed')
+      and tsrange(b.booking_date + b.start_time, (b.booking_date + b.end_time) + make_interval(mins => v_buffer), '[)')
+          && tsrange(v_start_ts, v_lock_end_ts, '[)')
+  ) then
+    raise exception 'slot_conflict: booking_overlap' using errcode = 'P0001';
+  end if;
+
+  insert into public.bookings (
+    id, code, service_id, service_name, duration_minutes, price_value,
+    booking_date, start_time, end_time, client_name, client_phone,
+    phone_digits, client_photo, professional, notes, status, source,
+    created_at, updated_at
+  )
+  values (
+    p_id, upper(trim(p_code)), p_service_id, v_service_name, v_duration, v_price,
+    p_booking_date, p_start_time, v_end_time, trim(p_client_name), p_client_phone,
+    v_phone_digits, coalesce(p_client_photo, ''), v_professional, coalesce(p_notes, ''),
+    'confirmed', coalesce(nullif(p_source, ''), 'site'), now(), now()
+  );
+
+  insert into public.clients (
+    client_name, client_phone, phone_digits, profile_photo,
+    first_seen_at, last_seen_at, created_at, updated_at
+  )
+  values (
+    trim(p_client_name), p_client_phone, v_phone_digits, coalesce(p_client_photo, ''),
+    now(), now(), now(), now()
+  )
+  on conflict (phone_digits) do update
+  set client_name = excluded.client_name,
+      client_phone = excluded.client_phone,
+      profile_photo = coalesce(nullif(excluded.profile_photo, ''), public.clients.profile_photo),
+      last_seen_at = now(),
+      updated_at = now();
+
+  return query
+  select b.id, b.code, b.service_id, b.service_name, b.duration_minutes, b.price_value,
+         b.booking_date, b.start_time, b.end_time, b.client_name, b.client_phone,
+         b.phone_digits, b.client_photo, b.professional, b.notes, b.status, b.source,
+         b.cancellation_reason, b.created_at, b.updated_at
+  from public.bookings b
+  where b.id = p_id;
+exception
+  when exclusion_violation then
+    raise exception 'slot_conflict: booking_overlap' using errcode = 'P0001';
+  when unique_violation then
+    raise exception 'slot_conflict: duplicate_booking' using errcode = 'P0001';
+end;
+$$;
+
+revoke all on function public.reserve_booking(
+  uuid, text, text, text, integer, numeric, date, time, text, text, text, text, text, text, text
+) from public;
+grant execute on function public.reserve_booking(
+  uuid, text, text, text, integer, numeric, date, time, text, text, text, text, text, text, text
+) to anon, authenticated;

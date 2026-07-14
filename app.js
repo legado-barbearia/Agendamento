@@ -438,7 +438,9 @@
         })
         .catch(error => {
           console.error("Erro ao consultar horários no Supabase:", error);
-          elements.times.innerHTML = '<p class="availability-note">Não foi possível consultar os horários online agora. Tente novamente em instantes.</p>';
+          remoteBookingsLoadedDates.add(state.date);
+          showToast("Não consegui consultar os horários online agora. Mostrando a agenda local.", true);
+          buildTimes();
         });
       return;
     }
@@ -732,7 +734,7 @@
 
   function showFirstAccessIfNeeded(force = false) {
     const needsProfile = !getSavedClientProfile();
-    setFirstAccessOpen(force || needsProfile);
+    setFirstAccessOpen(Boolean(force && needsProfile));
     return needsProfile;
   }
 
@@ -851,7 +853,10 @@
         await createBooking();
       } catch (error) {
         console.error("Erro ao salvar agendamento no Supabase:", error);
-        showInlineMessage(error.message || "Não foi possível salvar no Supabase.");
+        const message = /reserve_booking|function|schema cache|Supabase 40/i.test(String(error.message || ""))
+          ? "O Supabase ainda precisa ser atualizado. Execute o SQL novo antes de receber agendamentos online."
+          : "Não foi possível salvar no Supabase. Tente novamente em instantes.";
+        showInlineMessage(message);
       } finally {
         elements.next.disabled = false;
         elements.next.textContent = originalText;
@@ -887,7 +892,7 @@
     const target = Number(button.dataset.stepTarget);
     if (target < state.step) goToStep(target);
   }));
-  $$('a[href="#agendar"], [data-open-profile]').forEach(link => link.addEventListener("click", event => {
+  $$("[data-open-profile]").forEach(link => link.addEventListener("click", event => {
     if (getSavedClientProfile()) return;
     event.preventDefault();
     showFirstAccessIfNeeded(true);
